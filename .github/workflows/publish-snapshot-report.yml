@@ -47,6 +47,7 @@ jobs:
       SNAPSHOT_TO: ${{ github.event.inputs.snapshot_to || vars.SNAPSHOT_TO }}
       SNAPSHOT_LIMIT: ${{ github.event.inputs.snapshot_limit || vars.SNAPSHOT_LIMIT || '1000' }}
       SNAPSHOT_TOOL_FLOWS: ${{ vars.SNAPSHOT_TOOL_FLOWS }}
+      HAS_GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY != '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -71,7 +72,7 @@ jobs:
           export_environment_variables: true
 
       - name: Authenticate to Google Cloud with service account key fallback
-        if: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER == '' && secrets.GCP_SERVICE_ACCOUNT_KEY != '' }}
+        if: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER == '' && env.HAS_GCP_SERVICE_ACCOUNT_KEY == 'true' }}
         uses: google-github-actions/auth@v3
         with:
           project_id: ${{ vars.SNAPSHOT_PROJECT_ID || 'agent8-455106' }}
@@ -84,7 +85,7 @@ jobs:
           if [ "${SNAPSHOT_SOURCE}" = "gcp" ]; then
             test -n "${SNAPSHOT_PROJECT_ID}" || { echo "SNAPSHOT_PROJECT_ID is required for gcp snapshots."; exit 1; }
             test -n "${SNAPSHOT_SERVICE_NAME}" || { echo "SNAPSHOT_SERVICE_NAME is required for gcp snapshots."; exit 1; }
-            if [ -z "${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}" ] && [ -z "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" ]; then
+            if [ -z "${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}" ] && [ "${HAS_GCP_SERVICE_ACCOUNT_KEY}" != "true" ]; then
               echo "GCP auth is not configured. Set WIF vars or GCP_SERVICE_ACCOUNT_KEY."
               exit 1
             fi
