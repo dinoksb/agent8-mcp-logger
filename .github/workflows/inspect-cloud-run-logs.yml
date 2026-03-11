@@ -1,0 +1,132 @@
+name: Inspect Cloud Run Logs
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/inspect-cloud-run-logs.yml
+      - scripts/inspect-cloud-run-logs.ts
+  workflow_dispatch:
+    inputs:
+      inspect_from:
+        description: ISO8601 start timestamp
+        required: false
+        default: 2026-03-11T17:55:00Z
+        type: string
+      inspect_to:
+        description: ISO8601 end timestamp
+        required: false
+        default: 2026-03-11T18:00:00Z
+        type: string
+      inspect_limit:
+        description: Maximum number of entries to print
+        required: false
+        default: "100"
+        type: string
+      include_message_prefixes:
+        description: Restrict to known image generation prefixes
+        required: false
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    env:
+      INSPECT_PROJECT_ID: ${{ vars.SNAPSHOT_PROJECT_ID || 'agent8-455106' }}
+      INSPECT_SERVICE_NAME: ${{ vars.SNAPSHOT_SERVICE_NAME }}
+      INSPECT_LOCATION: ${{ vars.SNAPSHOT_LOCATION }}
+      INSPECT_TOOL_FLOWS: ${{ vars.SNAPSHOT_TOOL_FLOWS || 'image_asset_generate' }}
+      INSPECT_FROM_DEFAULT: 2026-03-11T17:55:00Z
+      INSPECT_TO_DEFAULT: 2026-03-11T18:00:00Z
+      INSPECT_LIMIT_DEFAULT: "100"
+      HAS_GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY != '' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Resolve inspection window
+        shell: bash
+        run: |
+          FROM="${{ github.event.inputs.inspect_from }}"
+          TO="${{ github.event.inputs.inspect_to }}"
+          LIMIT="${{ github.event.inputs.inspect_limit }}"
+          INCLUDE_MESSAGE_PREFIXES="${{ github.event.inputs.include_message_prefixes }}"
+
+          if [ -z "${FROM}" ]; then
+            FROM="${INSPECT_FROM_DEFAULT}"
+          fi
+          if [ -z "${TO}" ]; then
+            TO="${INSPECT_TO_DEFAULT}"
+          fi
+          if [ -z "${LIMIT}" ]; then
+            LIMIT="${INSPECT_LIMIT_DEFAULT}"
+          fi
+          if [ -z "${INCLUDE_MESSAGE_PREFIXES}" ]; then
+            INCLUDE_MESSAGE_PREFIXES="true"
+          fi
+
+          echo "INSPECT_FROM=${FROM}" >> "${GITHUB_ENV}"
+          echo "INSPECT_TO=${TO}" >> "${GITHUB_ENV}"
+          echo "INSPECT_LIMIT=${LIMIT}" >> "${GITHUB_ENV}"
+          echo "INSPECT_INCLUDE_MESSAGE_PREFIXES=${INCLUDE_MESSAGE_PREFIXES}" >> "${GITHUB_ENV}"
+
+      - name: Authenticate to Google Cloud with Workload Identity Federation
+        if: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && vars.GCP_SERVICE_ACCOUNT != '' }}
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ vars.SNAPSHOT_PROJECT_ID || 'agent8-455106' }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+          export_environment_variables: true
+
+      - name: Authenticate to Google Cloud with service account key fallback
+        if: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER == '' && env.HAS_GCP_SERVICE_ACCOUNT_KEY == 'true' }}
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ vars.SNAPSHOT_PROJECT_ID || 'agent8-455106' }}
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+          create_credentials_file: true
+          export_environment_variables: true
+
+      - name: Validate inspection configuration
+        shell: bash
+        run: |
+          test -n "${INSPECT_PROJECT_ID}" || { echo "INSPECT_PROJECT_ID is required."; exit 1; }
+          test -n "${INSPECT_SERVICE_NAME}" || { echo "INSPECT_SERVICE_NAME is required."; exit 1; }
+          if [ -z "${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}" ] && [ "${HAS_GCP_SERVICE_ACCOUNT_KEY}" != "true" ]; then
+            echo "GCP auth is not configured. Set WIF vars or GCP_SERVICE_ACCOUNT_KEY."
+            exit 1
+          fi
+
+      - name: Print resolved inspection configuration
+        run: |
+          echo "INSPECT_PROJECT_ID=${INSPECT_PROJECT_ID}"
+          echo "INSPECT_SERVICE_NAME=${INSPECT_SERVICE_NAME}"
+          echo "INSPECT_LOCATION=${INSPECT_LOCATION}"
+          echo "INSPECT_TOOL_FLOWS=${INSPECT_TOOL_FLOWS}"
+          echo "INSPECT_FROM=${INSPECT_FROM}"
+          echo "INSPECT_TO=${INSPECT_TO}"
+          echo "INSPECT_LIMIT=${INSPECT_LIMIT}"
+          echo "INSPECT_INCLUDE_MESSAGE_PREFIXES=${INSPECT_INCLUDE_MESSAGE_PREFIXES}"
+
+      - name: Install dependencies
+        run: npm ci --no-fund --no-audit
+
+      - name: Inspect Cloud Logging entries
+        run: npx tsx scripts/inspect-cloud-run-logs.ts
