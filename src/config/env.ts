@@ -1,5 +1,14 @@
 import type { LogQuery, ToolFlowName } from "../domain/types.js";
 
+function optionalValue(value: string | undefined): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  return trimmed === "" ? undefined : trimmed;
+}
+
 function parseToolFlows(value: string | undefined): ToolFlowName[] {
   if (!value) {
     return [
@@ -51,11 +60,19 @@ export function loadSnapshotConfig(
   env: NodeJS.ProcessEnv = process.env,
 ): SnapshotConfig {
   const window = defaultWindow();
+  const snapshotSource = optionalValue(env.SNAPSHOT_SOURCE);
+  const snapshotProjectId = optionalValue(env.SNAPSHOT_PROJECT_ID);
+  const snapshotServiceName = optionalValue(env.SNAPSHOT_SERVICE_NAME);
+  const snapshotLocation = optionalValue(env.SNAPSHOT_LOCATION);
+  const snapshotFrom = optionalValue(env.SNAPSHOT_FROM);
+  const snapshotTo = optionalValue(env.SNAPSHOT_TO);
+  const snapshotLimit = optionalValue(env.SNAPSHOT_LIMIT);
+  const snapshotToolFlows = optionalValue(env.SNAPSHOT_TOOL_FLOWS);
+  const snapshotOutputDir = optionalValue(env.SNAPSHOT_OUTPUT_DIR);
   const source =
-    env.SNAPSHOT_SOURCE === "gcp" ||
-    env.SNAPSHOT_SOURCE === "sample"
-      ? env.SNAPSHOT_SOURCE
-      : env.SNAPSHOT_PROJECT_ID && env.SNAPSHOT_SERVICE_NAME
+    snapshotSource === "gcp" || snapshotSource === "sample"
+      ? snapshotSource
+      : snapshotProjectId && snapshotServiceName
         ? "gcp"
         : "sample";
 
@@ -63,17 +80,16 @@ export function loadSnapshotConfig(
     query: {
       source,
       projectId:
-        env.SNAPSHOT_PROJECT_ID ?? (source === "sample" ? "sample-project" : undefined),
+        snapshotProjectId ?? (source === "sample" ? "sample-project" : undefined),
       serviceName:
-        env.SNAPSHOT_SERVICE_NAME ?? (source === "sample" ? "mcp-agent8" : undefined),
+        snapshotServiceName ?? (source === "sample" ? "mcp-agent8" : undefined),
       location:
-        env.SNAPSHOT_LOCATION ??
-        (source === "sample" ? "asia-northeast3" : undefined),
-      from: env.SNAPSHOT_FROM ?? window.from,
-      to: env.SNAPSHOT_TO ?? window.to,
-      limit: parseLimit(env.SNAPSHOT_LIMIT),
-      toolFlows: parseToolFlows(env.SNAPSHOT_TOOL_FLOWS),
+        snapshotLocation ?? (source === "sample" ? "asia-northeast3" : undefined),
+      from: snapshotFrom ?? window.from,
+      to: snapshotTo ?? window.to,
+      limit: parseLimit(snapshotLimit),
+      toolFlows: parseToolFlows(snapshotToolFlows),
     },
-    outputDir: env.SNAPSHOT_OUTPUT_DIR ?? "site/data",
+    outputDir: snapshotOutputDir ?? "site/data",
   };
 }
