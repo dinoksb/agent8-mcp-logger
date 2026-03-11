@@ -479,6 +479,7 @@ export function parseLogEntry(entry: RawLogEntryRecord): ParsedLogEvent {
   return {
     eventId: `event-${entry.id}`,
     rawEntryId: entry.id,
+    insertId: entry.insertId,
     timestamp: entry.timestamp,
     severity: entry.severity ?? "DEFAULT",
     projectId: entry.resource.labels.project_id,

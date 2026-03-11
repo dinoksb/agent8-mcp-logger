@@ -491,43 +491,65 @@
         }
 
         const identityClauses = [];
+        const exactInsertIds = Array.isArray(run.evidenceRawEntryIds)
+          ? run.evidenceRawEntryIds.filter(
+              (value) =>
+                typeof value === "string" &&
+                value &&
+                !value.startsWith("sample-") &&
+                !value.startsWith("raw-entry-") &&
+                !value.startsWith("gcp-entry-"),
+            )
+          : [];
 
-        if (run.operationId) {
+        if (exactInsertIds.length) {
+          filters.push(
+            `(${exactInsertIds
+              .map((insertId) => `insertId="${escapeLogsQueryValue(insertId)}"`)
+              .join(" OR ")})`,
+          );
+        }
+
+        if (!exactInsertIds.length && run.operationId) {
           const operationId = escapeLogsQueryValue(run.operationId);
           identityClauses.push(`jsonPayload.operationId="${operationId}"`);
+          identityClauses.push(`jsonPayload.operation_id="${operationId}"`);
           identityClauses.push(`textPayload:"${operationId}"`);
         }
 
-        if (run.requestId) {
+        if (!exactInsertIds.length && run.requestId) {
           const requestId = escapeLogsQueryValue(run.requestId);
           identityClauses.push(`jsonPayload.requestId="${requestId}"`);
+          identityClauses.push(`jsonPayload.request_id="${requestId}"`);
           identityClauses.push(`textPayload:"${requestId}"`);
         }
 
-        if (run.trace) {
+        if (!exactInsertIds.length && run.trace) {
           identityClauses.push(`trace="${escapeLogsQueryValue(run.trace)}"`);
         }
 
-        if (!identityClauses.length && flowPrefixes[run.toolFlow]) {
+        if (!exactInsertIds.length && !identityClauses.length && flowPrefixes[run.toolFlow]) {
           identityClauses.push(`textPayload:"${escapeLogsQueryValue(flowPrefixes[run.toolFlow])}"`);
+          identityClauses.push(`jsonPayload.message:"${escapeLogsQueryValue(flowPrefixes[run.toolFlow])}"`);
         }
 
-        if (identityClauses.length) {
+        if (!exactInsertIds.length && identityClauses.length) {
           filters.push(`(${identityClauses.join(" OR ")})`);
         }
 
         const startedAt = new Date(run.startedAt);
         const endedAt = new Date(run.endedAt ?? run.startedAt);
+        const paddingMs = exactInsertIds.length ? 15_000 : 60_000;
 
         if (!Number.isNaN(startedAt.getTime())) {
           filters.push(
-            `timestamp>="${new Date(startedAt.getTime() - 60_000).toISOString()}"`,
+            `timestamp>="${new Date(startedAt.getTime() - paddingMs).toISOString()}"`,
           );
         }
 
         if (!Number.isNaN(endedAt.getTime())) {
           filters.push(
-            `timestamp<="${new Date(endedAt.getTime() + 60_000).toISOString()}"`,
+            `timestamp<="${new Date(endedAt.getTime() + paddingMs).toISOString()}"`,
           );
         }
 

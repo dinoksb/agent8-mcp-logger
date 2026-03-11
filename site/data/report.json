@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-03-11T17:41:39.962Z",
-  "coveredFrom": "2026-03-10T17:41:39.951Z",
-  "coveredTo": "2026-03-11T17:41:39.951Z",
+  "generatedAt": "2026-03-11T17:53:53.267Z",
+  "coveredFrom": "2026-03-10T17:53:53.256Z",
+  "coveredTo": "2026-03-11T17:53:53.256Z",
   "query": {
     "source": "sample",
     "projectId": "sample-project",
     "serviceName": "mcp-agent8",
     "location": "asia-northeast3",
-    "from": "2026-03-10T17:41:39.951Z",
-    "to": "2026-03-11T17:41:39.951Z",
+    "from": "2026-03-10T17:53:53.256Z",
+    "to": "2026-03-11T17:53:53.256Z",
     "limit": 1000,
     "toolFlows": [
       "image_asset_generate",
@@ -131,6 +131,15 @@
         "event-sample-6",
         "event-sample-7"
       ],
+      "evidenceRawEntryIds": [
+        "sample-1",
+        "sample-2",
+        "sample-3",
+        "sample-4",
+        "sample-5",
+        "sample-6",
+        "sample-7"
+      ],
       "bottleneckStage": "provider_request",
       "bottleneckDurationMs": 19800
     },
@@ -199,6 +208,13 @@
         "event-sample-10",
         "event-sample-11",
         "event-sample-12"
+      ],
+      "evidenceRawEntryIds": [
+        "sample-8",
+        "sample-9",
+        "sample-10",
+        "sample-11",
+        "sample-12"
       ],
       "bottleneckStage": "queue_wait",
       "bottleneckDurationMs": 17200,
@@ -305,6 +321,17 @@
         "event-sample-20",
         "event-sample-21"
       ],
+      "evidenceRawEntryIds": [
+        "sample-13",
+        "sample-14",
+        "sample-15",
+        "sample-16",
+        "sample-17",
+        "sample-18",
+        "sample-19",
+        "sample-20",
+        "sample-21"
+      ],
       "bottleneckStage": "queue_wait",
       "bottleneckDurationMs": 60300,
       "failureKind": "primary_provider_failure"
@@ -383,6 +410,14 @@
         "event-sample-25",
         "event-sample-26",
         "event-sample-27"
+      ],
+      "evidenceRawEntryIds": [
+        "sample-22",
+        "sample-23",
+        "sample-24",
+        "sample-25",
+        "sample-26",
+        "sample-27"
       ],
       "bottleneckStage": "provider_request",
       "bottleneckDurationMs": 20700

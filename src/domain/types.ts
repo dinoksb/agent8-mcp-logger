@@ -75,6 +75,7 @@ export interface RawLogEntryRecord {
 export interface ParsedLogEvent {
   eventId: string;
   rawEntryId: string;
+  insertId?: string;
   timestamp: string;
   severity: string;
   projectId?: string;
@@ -149,6 +150,7 @@ export interface CorrelatedRun {
   prompt?: string;
   resultUrl?: string;
   evidenceEventIds: string[];
+  evidenceRawEntryIds: string[];
 }
 
 export interface IncidentReport {

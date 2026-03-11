@@ -258,6 +258,11 @@ export function correlateEvents(events: ParsedLogEvent[]): CorrelatedRun[] {
         prompt: pickRunPrompt(eventsInRun),
         resultUrl: pickResultUrl(eventsInRun),
         evidenceEventIds: eventsInRun.map((event) => event.eventId),
+        evidenceRawEntryIds: unique(
+          eventsInRun
+            .map((event) => event.insertId ?? event.rawEntryId)
+            .filter((value): value is string => Boolean(value)),
+        ),
       };
     })
     .sort((left, right) => compareTimestamps(left.startedAt, right.startedAt));
