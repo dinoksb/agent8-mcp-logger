@@ -529,9 +529,9 @@ export function parseLogEntry(entry: RawLogEntryRecord): ParsedLogEvent {
     toolFlow,
     message,
     stage,
-    operationId: asString(
-      getPayloadValueDeep(payload, "operationId", "operation_id"),
-    ),
+    operationId:
+      asString(getPayloadValueDeep(payload, "operationId", "operation_id")) ??
+      entry.operationId,
     requestId: asString(
       getPayloadValueDeep(payload, "requestId", "request_id"),
     ),

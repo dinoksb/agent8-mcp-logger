@@ -49,6 +49,7 @@ export type FailureKind =
 export interface RawLogEntryRecord {
   id: string;
   insertId?: string;
+  operationId?: string;
   logName: string;
   timestamp: string;
   receiveTimestamp?: string;

@@ -57,6 +57,9 @@ export function normalizeRawLogEntry(
   return {
     id,
     insertId: getString(record.insertId),
+    operationId:
+      getString(record.operationId) ??
+      getString(getRecord(record.operation)?.id),
     logName: getString(record.logName) ?? "unknown-log",
     timestamp: getTimestampString(record.timestamp) ?? new Date().toISOString(),
     receiveTimestamp: getTimestampString(record.receiveTimestamp),

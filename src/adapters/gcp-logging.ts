@@ -59,6 +59,8 @@ function toSerializableEntry(entry: any, index: number): unknown {
   return {
     id: metadata.insertId ?? `gcp-entry-${index + 1}`,
     insertId: metadata.insertId,
+    operationId:
+      typeof metadata.operation?.id === "string" ? metadata.operation.id : undefined,
     logName: metadata.logName,
     timestamp: metadata.timestamp,
     receiveTimestamp: metadata.receiveTimestamp,
