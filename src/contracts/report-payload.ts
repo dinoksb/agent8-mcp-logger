@@ -2,6 +2,7 @@ import type {
   CorrelatedRun,
   IncidentReport,
   LogQuery,
+  ParsedLogEvent,
   ToolFlowName,
 } from "../domain/types.js";
 
@@ -30,6 +31,10 @@ export interface SnapshotDiagnostics {
   notes: string[];
 }
 
+export interface ReportRun extends CorrelatedRun {
+  evidenceEvents: ParsedLogEvent[];
+}
+
 export interface ReportPayload {
   generatedAt: string;
   coveredFrom: string;
@@ -37,7 +42,7 @@ export interface ReportPayload {
   query: LogQuery;
   summary: ReportSummary;
   diagnostics: SnapshotDiagnostics;
-  runs: CorrelatedRun[];
+  runs: ReportRun[];
   incidents: IncidentReport[];
 }
 
@@ -47,6 +52,6 @@ export interface RunsPayload {
   coveredTo: string;
   summary: ReportSummary;
   diagnostics: SnapshotDiagnostics;
-  runs: CorrelatedRun[];
+  runs: ReportRun[];
   incidents: IncidentReport[];
 }

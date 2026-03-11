@@ -79,6 +79,7 @@ async function main(): Promise<void> {
       fetchStrategy: fetchResult.strategy,
       notes: diagnosticsNotes,
     },
+    events: relevantEvents,
     runs: classified.runs,
     incidents: classified.incidents,
   });

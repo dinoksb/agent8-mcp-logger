@@ -1,5 +1,6 @@
 import type {
   ReportPayload,
+  ReportRun,
   ReportSummary,
   RunsPayload,
   SnapshotDiagnostics,
@@ -8,6 +9,7 @@ import type {
   CorrelatedRun,
   IncidentReport,
   LogQuery,
+  ParsedLogEvent,
   ToolFlowName,
 } from "../domain/types.js";
 
@@ -45,23 +47,49 @@ export function buildSummary(
   };
 }
 
+function buildReportRuns(
+  runs: CorrelatedRun[],
+  events: ParsedLogEvent[],
+  includeRawMetadata: boolean,
+): ReportRun[] {
+  const eventsById = new Map(events.map((event) => [event.eventId, event]));
+
+  return runs.map((run) => ({
+    ...run,
+    evidenceEvents: run.evidenceEventIds
+      .map((eventId) => eventsById.get(eventId))
+      .filter((event): event is ParsedLogEvent => event !== undefined)
+      .map((event) => ({
+        ...event,
+        metadata: includeRawMetadata ? event.metadata : {},
+      })),
+  }));
+}
+
 export function buildReportPayload(input: {
   generatedAt: string;
   coveredFrom: string;
   coveredTo: string;
   query: LogQuery;
   diagnostics: SnapshotDiagnostics;
+  events: ParsedLogEvent[];
   runs: CorrelatedRun[];
   incidents: IncidentReport[];
 }): ReportPayload {
+  const reportRuns = buildReportRuns(
+    input.runs,
+    input.events,
+    input.query.source === "sample",
+  );
+
   return {
     generatedAt: input.generatedAt,
     coveredFrom: input.coveredFrom,
     coveredTo: input.coveredTo,
     query: input.query,
-    summary: buildSummary(input.runs, input.incidents),
+    summary: buildSummary(reportRuns, input.incidents),
     diagnostics: input.diagnostics,
-    runs: input.runs,
+    runs: reportRuns,
     incidents: input.incidents,
   };
 }
