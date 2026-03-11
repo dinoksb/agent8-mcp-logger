@@ -1,6 +1,9 @@
 name: Publish Snapshot Report
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       snapshot_source:
@@ -39,7 +42,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      SNAPSHOT_SOURCE: ${{ github.event.inputs.snapshot_source || vars.SNAPSHOT_SOURCE || 'sample' }}
       SNAPSHOT_PROJECT_ID: ${{ vars.SNAPSHOT_PROJECT_ID || 'agent8-455106' }}
       SNAPSHOT_SERVICE_NAME: ${{ vars.SNAPSHOT_SERVICE_NAME }}
       SNAPSHOT_LOCATION: ${{ vars.SNAPSHOT_LOCATION }}
@@ -48,6 +50,8 @@ jobs:
       SNAPSHOT_LIMIT: ${{ github.event.inputs.snapshot_limit || vars.SNAPSHOT_LIMIT || '1000' }}
       SNAPSHOT_TOOL_FLOWS: ${{ vars.SNAPSHOT_TOOL_FLOWS }}
       HAS_GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY != '' }}
+      HAS_WIF_CONFIG: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && vars.GCP_SERVICE_ACCOUNT != '' }}
+      REPO_SNAPSHOT_SOURCE: ${{ vars.SNAPSHOT_SOURCE }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -60,6 +64,33 @@ jobs:
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
+
+      - name: Resolve snapshot source
+        shell: bash
+        run: |
+          SOURCE="${{ github.event.inputs.snapshot_source }}"
+          HAS_GCP_CONFIG="false"
+
+          if [ -n "${SNAPSHOT_PROJECT_ID}" ] && [ -n "${SNAPSHOT_SERVICE_NAME}" ]; then
+            if [ "${HAS_WIF_CONFIG}" = "true" ] || [ "${HAS_GCP_SERVICE_ACCOUNT_KEY}" = "true" ]; then
+              HAS_GCP_CONFIG="true"
+            fi
+          fi
+
+          if [ -z "${SOURCE}" ]; then
+            if [ "${{ github.event_name }}" = "push" ] && [ "${HAS_GCP_CONFIG}" = "true" ]; then
+              SOURCE="gcp"
+            elif [ -n "${REPO_SNAPSHOT_SOURCE}" ]; then
+              SOURCE="${REPO_SNAPSHOT_SOURCE}"
+            elif [ "${HAS_GCP_CONFIG}" = "true" ]; then
+              SOURCE="gcp"
+            else
+              SOURCE="sample"
+            fi
+          fi
+
+          echo "SNAPSHOT_SOURCE=${SOURCE}" >> "${GITHUB_ENV}"
+          echo "Resolved snapshot source: ${SOURCE}"
 
       - name: Authenticate to Google Cloud with Workload Identity Federation
         if: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && vars.GCP_SERVICE_ACCOUNT != '' }}
@@ -90,6 +121,16 @@ jobs:
               exit 1
             fi
           fi
+
+      - name: Print resolved snapshot configuration
+        run: |
+          echo "SNAPSHOT_SOURCE=${SNAPSHOT_SOURCE}"
+          echo "SNAPSHOT_PROJECT_ID=${SNAPSHOT_PROJECT_ID}"
+          echo "SNAPSHOT_SERVICE_NAME=${SNAPSHOT_SERVICE_NAME}"
+          echo "SNAPSHOT_LOCATION=${SNAPSHOT_LOCATION}"
+          echo "SNAPSHOT_FROM=${SNAPSHOT_FROM}"
+          echo "SNAPSHOT_TO=${SNAPSHOT_TO}"
+          echo "SNAPSHOT_LIMIT=${SNAPSHOT_LIMIT}"
 
       - name: Install dependencies
         run: npm ci --no-fund --no-audit
