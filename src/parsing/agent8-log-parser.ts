@@ -327,6 +327,7 @@ function extractLooseMetadataFields(
     "queuePosition",
     "queue_position",
     "queued",
+    "prompt",
     "referenceType",
     "reference_type",
     "fallbackFromModel",
@@ -512,6 +513,7 @@ export function parseLogEntry(entry: RawLogEntryRecord): ParsedLogEvent {
       typeof getPayloadValue(payload, "queued") === "boolean"
         ? (getPayloadValue(payload, "queued") as boolean)
         : undefined,
+    prompt: asString(getPayloadValue(payload, "prompt")),
     referenceType: (() => {
       const referenceType = asString(
         getPayloadValue(payload, "referenceType", "reference_type"),

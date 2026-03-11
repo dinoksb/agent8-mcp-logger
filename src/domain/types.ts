@@ -107,6 +107,7 @@ export interface ParsedLogEvent {
   numImages?: number;
   queuePosition?: number;
   queued?: boolean;
+  prompt?: string;
   referenceType?: "spritesheet" | "static";
   fallbackFromModel?: string;
   status?: string;
@@ -129,6 +130,7 @@ export interface CorrelatedRun {
   location?: string;
   serviceName?: string;
   revisionName?: string;
+  trace?: string;
   toolFlow: ToolFlowName;
   operationId?: string;
   requestId?: string;
@@ -144,6 +146,8 @@ export interface CorrelatedRun {
   bottleneckDurationMs?: number;
   timeoutKind?: TimeoutKind;
   failureKind?: FailureKind;
+  prompt?: string;
+  resultUrl?: string;
   evidenceEventIds: string[];
 }
 

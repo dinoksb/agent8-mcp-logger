@@ -191,6 +191,64 @@
         margin-top: 4px;
       }
 
+      .run-content {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 12px;
+        margin-top: 14px;
+      }
+
+      .info-card {
+        padding: 14px 16px;
+        border-radius: 16px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.55);
+      }
+
+      .prompt-text {
+        margin: 10px 0 0;
+        white-space: pre-wrap;
+        word-break: break-word;
+        line-height: 1.55;
+      }
+
+      .result-link {
+        color: var(--accent);
+        font-weight: 700;
+        text-decoration: none;
+        word-break: break-all;
+      }
+
+      .result-preview {
+        display: block;
+        width: 100%;
+        max-width: 320px;
+        margin-top: 12px;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.82);
+        object-fit: contain;
+      }
+
+      .run-links {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 14px;
+      }
+
+      .run-links a {
+        display: inline-flex;
+        align-items: center;
+        padding: 10px 14px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.7);
+        color: var(--accent);
+        font-weight: 700;
+        text-decoration: none;
+      }
+
       details {
         margin-top: 14px;
       }
@@ -370,10 +428,111 @@
       const incidentsNode = document.querySelector("#incidents");
       const runsNode = document.querySelector("#runs");
 
-      const fmt = (value) => new Date(value).toLocaleString();
+      const fmt = (value) => (value ? new Date(value).toLocaleString() : "-");
       const labelCase = (value) => value.replaceAll("_", " ");
       const fmtMs = (value) =>
         typeof value === "number" ? `${(value / 1000).toFixed(1)}s` : "-";
+      const flowPrefixes = {
+        image_asset_generate: "[ImageGeneration]",
+        image_variation_generate: "[ImageVariation]",
+        spritesheet_generate: "[SpritesheetGeneration]",
+        spritesheet_variation_generate: "[SpritesheetVariation]",
+      };
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function isHttpUrl(value) {
+        if (!value) {
+          return false;
+        }
+
+        try {
+          const parsed = new URL(value);
+          return parsed.protocol === "http:" || parsed.protocol === "https:";
+        } catch {
+          return false;
+        }
+      }
+
+      function escapeLogsQueryValue(value) {
+        return String(value).replaceAll("\\", "\\\\").replaceAll('"', '\\"');
+      }
+
+      function buildLogsExplorerUrl(run, report) {
+        const projectId = run.projectId ?? report.query.projectId;
+        const serviceName = run.serviceName ?? report.query.serviceName;
+
+        if (!projectId || !serviceName) {
+          return null;
+        }
+
+        const filters = [
+          'resource.type="cloud_run_revision"',
+          `resource.labels.service_name="${escapeLogsQueryValue(serviceName)}"`,
+        ];
+
+        if (run.location ?? report.query.location) {
+          filters.push(
+            `resource.labels.location="${escapeLogsQueryValue(run.location ?? report.query.location)}"`,
+          );
+        }
+
+        if (run.revisionName) {
+          filters.push(
+            `resource.labels.revision_name="${escapeLogsQueryValue(run.revisionName)}"`,
+          );
+        }
+
+        const identityClauses = [];
+
+        if (run.operationId) {
+          const operationId = escapeLogsQueryValue(run.operationId);
+          identityClauses.push(`jsonPayload.operationId="${operationId}"`);
+          identityClauses.push(`textPayload:"${operationId}"`);
+        }
+
+        if (run.requestId) {
+          const requestId = escapeLogsQueryValue(run.requestId);
+          identityClauses.push(`jsonPayload.requestId="${requestId}"`);
+          identityClauses.push(`textPayload:"${requestId}"`);
+        }
+
+        if (run.trace) {
+          identityClauses.push(`trace="${escapeLogsQueryValue(run.trace)}"`);
+        }
+
+        if (!identityClauses.length && flowPrefixes[run.toolFlow]) {
+          identityClauses.push(`textPayload:"${escapeLogsQueryValue(flowPrefixes[run.toolFlow])}"`);
+        }
+
+        if (identityClauses.length) {
+          filters.push(`(${identityClauses.join(" OR ")})`);
+        }
+
+        const startedAt = new Date(run.startedAt);
+        const endedAt = new Date(run.endedAt ?? run.startedAt);
+
+        if (!Number.isNaN(startedAt.getTime())) {
+          filters.push(
+            `timestamp>="${new Date(startedAt.getTime() - 60_000).toISOString()}"`,
+          );
+        }
+
+        if (!Number.isNaN(endedAt.getTime())) {
+          filters.push(
+            `timestamp<="${new Date(endedAt.getTime() + 60_000).toISOString()}"`,
+          );
+        }
+
+        return `https://console.cloud.google.com/logs/query;query=${encodeURIComponent(filters.join("\n"))}?project=${encodeURIComponent(projectId)}`;
+      }
 
       function renderSummary(report) {
         const cards = [
@@ -491,9 +650,9 @@
             (incident) => `
               <article class="incident" data-severity="${incident.severity}">
                 <div class="pill ${incident.severity}">${incident.severity}</div>
-                <h3>${incident.summary}</h3>
-                <p class="subtle">${incident.explanation}</p>
-                <p class="subtle"><strong>Run:</strong> <code>${incident.runId}</code></p>
+                <h3>${escapeHtml(incident.summary)}</h3>
+                <p class="subtle">${escapeHtml(incident.explanation)}</p>
+                <p class="subtle"><strong>Run:</strong> <code>${escapeHtml(incident.runId)}</code></p>
               </article>
             `,
           )
@@ -516,14 +675,17 @@
         }
 
         runsNode.innerHTML = report.runs
-          .map(
-            (run) => `
+          .map((run) => {
+            const resultUrl = isHttpUrl(run.resultUrl) ? run.resultUrl : null;
+            const logsExplorerUrl = buildLogsExplorerUrl(run, report);
+
+            return `
               <article class="run-card">
                 <div class="run-head">
                   <div>
                     <div class="pill ${run.status === "failed" ? "critical" : run.status === "handed_off" ? "warning" : ""}">${labelCase(run.status)}</div>
                     <h3 class="run-title">${labelCase(run.toolFlow)}</h3>
-                    <div class="subtle"><code>${run.runId}</code></div>
+                    <div class="subtle"><code>${escapeHtml(run.runId)}</code></div>
                   </div>
                   <div class="subtle">
                     Started: ${fmt(run.startedAt)}<br />
@@ -535,7 +697,7 @@
                 <div class="run-meta">
                   <div>
                     <span class="subtle">Providers</span>
-                    <strong>${run.providerChain.length ? run.providerChain.join(" -> ") : "-"}</strong>
+                    <strong>${run.providerChain.length ? escapeHtml(run.providerChain.join(" -> ")) : "-"}</strong>
                   </div>
                   <div>
                     <span class="subtle">Bottleneck</span>
@@ -543,13 +705,70 @@
                   </div>
                   <div>
                     <span class="subtle">Operation / Request</span>
-                    <strong><code>${run.operationId ?? "-"}</code>${run.requestId ? `<br /><code>${run.requestId}</code>` : ""}</strong>
+                    <strong><code>${escapeHtml(run.operationId ?? "-")}</code>${run.requestId ? `<br /><code>${escapeHtml(run.requestId)}</code>` : ""}</strong>
                   </div>
                   <div>
                     <span class="subtle">Failure / Timeout</span>
                     <strong>${run.failureKind ? labelCase(run.failureKind) : "-"}${run.timeoutKind ? `<br />${labelCase(run.timeoutKind)}` : ""}</strong>
                   </div>
                 </div>
+
+                ${(run.prompt || resultUrl)
+                  ? `
+                    <div class="run-content">
+                      ${
+                        run.prompt
+                          ? `
+                            <div class="info-card">
+                              <span class="subtle">Prompt</span>
+                              <p class="prompt-text">${escapeHtml(run.prompt)}</p>
+                            </div>
+                          `
+                          : ""
+                      }
+                      ${
+                        resultUrl
+                          ? `
+                            <div class="info-card">
+                              <span class="subtle">Result asset</span>
+                              <div>
+                                <a class="result-link" href="${escapeHtml(resultUrl)}" target="_blank" rel="noreferrer">${escapeHtml(resultUrl)}</a>
+                              </div>
+                              ${
+                                run.status === "completed"
+                                  ? `
+                                    <a href="${escapeHtml(resultUrl)}" target="_blank" rel="noreferrer">
+                                      <img class="result-preview" src="${escapeHtml(resultUrl)}" alt="${escapeHtml(run.runId)} result preview" loading="lazy" />
+                                    </a>
+                                  `
+                                  : ""
+                              }
+                            </div>
+                          `
+                          : ""
+                      }
+                    </div>
+                  `
+                  : ""
+                }
+
+                ${(resultUrl || logsExplorerUrl)
+                  ? `
+                    <div class="run-links">
+                      ${
+                        resultUrl
+                          ? `<a href="${escapeHtml(resultUrl)}" target="_blank" rel="noreferrer">Open result URL</a>`
+                          : ""
+                      }
+                      ${
+                        logsExplorerUrl
+                          ? `<a href="${escapeHtml(logsExplorerUrl)}" target="_blank" rel="noreferrer">Open GCP logs</a>`
+                          : ""
+                      }
+                    </div>
+                  `
+                  : ""
+                }
 
                 <details>
                   <summary>Stages (${run.stages.length})</summary>
@@ -572,8 +791,8 @@
                   </div>
                 </details>
               </article>
-            `,
-          )
+            `;
+          })
           .join("");
       }
 

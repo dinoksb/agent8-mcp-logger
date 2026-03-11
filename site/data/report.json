@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-03-11T16:22:53.663Z",
-  "coveredFrom": "2026-03-10T16:22:53.660Z",
-  "coveredTo": "2026-03-11T16:22:53.660Z",
+  "generatedAt": "2026-03-11T17:41:39.962Z",
+  "coveredFrom": "2026-03-10T17:41:39.951Z",
+  "coveredTo": "2026-03-11T17:41:39.951Z",
   "query": {
     "source": "sample",
     "projectId": "sample-project",
     "serviceName": "mcp-agent8",
     "location": "asia-northeast3",
-    "from": "2026-03-10T16:22:53.660Z",
-    "to": "2026-03-11T16:22:53.660Z",
+    "from": "2026-03-10T17:41:39.951Z",
+    "to": "2026-03-11T17:41:39.951Z",
     "limit": 1000,
     "toolFlows": [
       "image_asset_generate",
@@ -120,6 +120,8 @@
         }
       ],
       "totalDurationMs": 28900,
+      "prompt": "A cheerful chibi knight sprite sheet with four walking directions, bright armor, and transparent background.",
+      "resultUrl": "https://example.com/generated/sprite-op-001.png",
       "evidenceEventIds": [
         "event-sample-1",
         "event-sample-2",
@@ -190,6 +192,7 @@
         }
       ],
       "totalDurationMs": 20400,
+      "prompt": "An anime-style mage character portrait with glowing blue staff, white background, centered full body composition.",
       "evidenceEventIds": [
         "event-sample-8",
         "event-sample-9",
@@ -208,6 +211,7 @@
       "location": "asia-northeast3",
       "serviceName": "mcp-agent8",
       "revisionName": "mcp-agent8-00012-sample",
+      "trace": "projects/sample-project/traces/variation-trace-003",
       "toolFlow": "image_variation_generate",
       "operationId": "variation-op-003",
       "requestId": "fal-req-003",
@@ -288,6 +292,8 @@
         }
       ],
       "totalDurationMs": 67100,
+      "prompt": "Turn the character into a battle-damaged alternate version with torn cape, cracked staff, and darker palette.",
+      "resultUrl": "https://example.com/generated/variation-op-003.png",
       "evidenceEventIds": [
         "event-sample-13",
         "event-sample-14",
@@ -368,6 +374,8 @@
         }
       ],
       "totalDurationMs": 23150,
+      "prompt": "A lively forest spirit sprite sheet variation with soft green glow, idle and walk frames, transparent background.",
+      "resultUrl": "https://example.com/generated/sprite-var-op-004.png",
       "evidenceEventIds": [
         "event-sample-22",
         "event-sample-23",

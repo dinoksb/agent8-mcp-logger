@@ -18,6 +18,28 @@ function unique<T>(values: T[]): T[] {
   return [...new Set(values)];
 }
 
+function pickRunPrompt(events: ParsedLogEvent[]): string | undefined {
+  return (
+    events.find((event) => event.stage === "request" && event.prompt)?.prompt ??
+    events.find((event) => event.prompt)?.prompt
+  );
+}
+
+function pickResultUrl(events: ParsedLogEvent[]): string | undefined {
+  const preferredStages = ["completed", "upload", "result_fetch", "post_processing"];
+
+  for (const stage of preferredStages) {
+    const matchedEvent = [...events]
+      .reverse()
+      .find((event) => event.stage === stage && event.url);
+    if (matchedEvent?.url) {
+      return matchedEvent.url;
+    }
+  }
+
+  return [...events].reverse().find((event) => event.url)?.url;
+}
+
 function buildCorrelationAliases(events: ParsedLogEvent[]): CorrelationAliases {
   const requestIdToOperationId = new Map<string, string>();
   const traceToOperationId = new Map<string, string>();
@@ -195,6 +217,7 @@ export function correlateEvents(events: ParsedLogEvent[]): CorrelatedRun[] {
           ? groupKey.slice("operation:".length)
           : undefined);
       const requestId = eventsInRun.find((event) => event.requestId)?.requestId;
+      const trace = eventsInRun.find((event) => event.trace)?.trace;
       const totalDurationMs = Math.max(
         0,
         ...eventsInRun
@@ -211,6 +234,7 @@ export function correlateEvents(events: ParsedLogEvent[]): CorrelatedRun[] {
         location: primaryEvent.location,
         serviceName: primaryEvent.serviceName,
         revisionName: primaryEvent.revisionName,
+        trace,
         toolFlow,
         operationId,
         requestId,
@@ -231,6 +255,8 @@ export function correlateEvents(events: ParsedLogEvent[]): CorrelatedRun[] {
               ? new Date(eventsInRun.at(-1)!.timestamp).getTime() -
                 new Date(primaryEvent.timestamp).getTime()
               : undefined,
+        prompt: pickRunPrompt(eventsInRun),
+        resultUrl: pickResultUrl(eventsInRun),
         evidenceEventIds: eventsInRun.map((event) => event.eventId),
       };
     })
