@@ -51,6 +51,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function asString(value: unknown): string | undefined {
   return typeof value === "string" ? value : undefined;
 }
@@ -250,6 +254,99 @@ function parseTextPayload(textPayload: string): {
   }
 }
 
+function extractLooseFieldValue(
+  textPayload: string | undefined,
+  key: string,
+): unknown {
+  if (!textPayload) {
+    return undefined;
+  }
+
+  const escapedKey = escapeRegExp(key);
+  const patterns = [
+    new RegExp(`["']?${escapedKey}["']?\\s*:\\s*"((?:\\\\"|[^"])*)"`, "m"),
+    new RegExp(`["']?${escapedKey}["']?\\s*:\\s*'((?:\\\\'|[^'])*)'`, "m"),
+    new RegExp(`["']?${escapedKey}["']?\\s*:\\s*(-?\\d+(?:\\.\\d+)?)`, "m"),
+    new RegExp(`["']?${escapedKey}["']?\\s*:\\s*(true|false)`, "mi"),
+    new RegExp(`["']?${escapedKey}["']?\\s*:\\s*null`, "mi"),
+  ];
+
+  const stringMatch = textPayload.match(patterns[0]) ?? textPayload.match(patterns[1]);
+  if (stringMatch) {
+    return stringMatch[1]
+      .replace(/\\"/g, '"')
+      .replace(/\\'/g, "'");
+  }
+
+  const numberMatch = textPayload.match(patterns[2]);
+  if (numberMatch) {
+    return Number(numberMatch[1]);
+  }
+
+  const booleanMatch = textPayload.match(patterns[3]);
+  if (booleanMatch) {
+    return booleanMatch[1].toLowerCase() === "true";
+  }
+
+  if (patterns[4].test(textPayload)) {
+    return null;
+  }
+
+  return undefined;
+}
+
+function extractLooseMetadataFields(
+  textPayload: string | undefined,
+): Record<string, unknown> {
+  const metadata: Record<string, unknown> = {};
+  const keys = [
+    "operationId",
+    "operation_id",
+    "requestId",
+    "request_id",
+    "provider",
+    "providerName",
+    "model",
+    "modelName",
+    "modelPath",
+    "phase",
+    "stage",
+    "durationMs",
+    "duration_ms",
+    "totalDurationMs",
+    "total_duration_ms",
+    "assetType",
+    "asset_type",
+    "style",
+    "width",
+    "height",
+    "rows",
+    "cols",
+    "numImages",
+    "num_images",
+    "queuePosition",
+    "queue_position",
+    "queued",
+    "referenceType",
+    "reference_type",
+    "fallbackFromModel",
+    "fallback_from_model",
+    "status",
+    "url",
+    "errorMessage",
+    "error_message",
+  ];
+
+  for (const key of keys) {
+    const value = extractLooseFieldValue(textPayload, key);
+    if (value !== undefined) {
+      metadata[key] = value;
+    }
+  }
+
+  return metadata;
+}
+
 function deriveMessage(entry: RawLogEntryRecord): string {
   const payload = entry.jsonPayload ?? {};
   const parsedTextPayload = entry.textPayload
@@ -372,6 +469,7 @@ export function parseLogEntry(entry: RawLogEntryRecord): ParsedLogEvent {
   const payload = {
     ...(isRecord(entry.jsonPayload) ? entry.jsonPayload : {}),
     ...(textPayload?.metadata ?? {}),
+    ...extractLooseMetadataFields(entry.textPayload),
   };
   const message = deriveMessage(entry);
   const toolFlow = deriveToolFlow(message, payload);

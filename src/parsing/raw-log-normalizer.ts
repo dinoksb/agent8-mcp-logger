@@ -8,6 +8,33 @@ function getString(value: unknown): string | undefined {
   return typeof value === "string" ? value : undefined;
 }
 
+function getTimestampString(value: unknown): string | undefined {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    "seconds" in value &&
+    typeof (value as { seconds?: unknown }).seconds === "number"
+  ) {
+    const timestampLike = value as { seconds: number; nanos?: unknown };
+    const seconds = timestampLike.seconds;
+    const nanos =
+      typeof timestampLike.nanos === "number"
+        ? timestampLike.nanos
+        : 0;
+    return new Date(seconds * 1000 + Math.floor(nanos / 1_000_000)).toISOString();
+  }
+
+  return undefined;
+}
+
 function getRecord(value: unknown): Record<string, unknown> | undefined {
   return isRecord(value) ? value : undefined;
 }
@@ -31,8 +58,8 @@ export function normalizeRawLogEntry(
     id,
     insertId: getString(record.insertId),
     logName: getString(record.logName) ?? "unknown-log",
-    timestamp: getString(record.timestamp) ?? new Date().toISOString(),
-    receiveTimestamp: getString(record.receiveTimestamp),
+    timestamp: getTimestampString(record.timestamp) ?? new Date().toISOString(),
+    receiveTimestamp: getTimestampString(record.receiveTimestamp),
     severity: getString(record.severity),
     textPayload: getString(record.textPayload),
     jsonPayload,
@@ -65,4 +92,3 @@ export function normalizeRawLogEntries(
 ): RawLogEntryRecord[] {
   return inputs.map((input, index) => normalizeRawLogEntry(input, index));
 }
-
