@@ -65,6 +65,7 @@ jobs:
         uses: actions/configure-pages@v5
 
       - name: Resolve snapshot source
+        id: resolve_source
         shell: bash
         run: |
           SOURCE="${{ github.event.inputs.snapshot_source }}"
@@ -89,9 +90,11 @@ jobs:
           fi
 
           echo "SNAPSHOT_SOURCE=${SOURCE}" >> "${GITHUB_ENV}"
+          echo "snapshot_source=${SOURCE}" >> "${GITHUB_OUTPUT}"
           echo "Resolved snapshot source: ${SOURCE}"
 
       - name: Resolve snapshot window
+        id: resolve_window
         shell: bash
         run: |
           INPUT_FROM="${{ github.event.inputs.snapshot_from }}"
@@ -120,6 +123,8 @@ jobs:
 
           echo "SNAPSHOT_FROM=${FROM}" >> "${GITHUB_ENV}"
           echo "SNAPSHOT_TO=${TO}" >> "${GITHUB_ENV}"
+          echo "snapshot_from=${FROM}" >> "${GITHUB_OUTPUT}"
+          echo "snapshot_to=${TO}" >> "${GITHUB_OUTPUT}"
           echo "Resolved snapshot window: ${FROM} -> ${TO}"
 
       - name: Authenticate to Google Cloud with Workload Identity Federation
@@ -142,6 +147,10 @@ jobs:
           export_environment_variables: true
 
       - name: Validate snapshot configuration
+        env:
+          SNAPSHOT_SOURCE: ${{ steps.resolve_source.outputs.snapshot_source }}
+          SNAPSHOT_FROM: ${{ steps.resolve_window.outputs.snapshot_from }}
+          SNAPSHOT_TO: ${{ steps.resolve_window.outputs.snapshot_to }}
         run: |
           if [ "${SNAPSHOT_SOURCE}" = "gcp" ]; then
             test -n "${SNAPSHOT_PROJECT_ID}" || { echo "SNAPSHOT_PROJECT_ID is required for gcp snapshots."; exit 1; }
@@ -153,6 +162,10 @@ jobs:
           fi
 
       - name: Print resolved snapshot configuration
+        env:
+          SNAPSHOT_SOURCE: ${{ steps.resolve_source.outputs.snapshot_source }}
+          SNAPSHOT_FROM: ${{ steps.resolve_window.outputs.snapshot_from }}
+          SNAPSHOT_TO: ${{ steps.resolve_window.outputs.snapshot_to }}
         run: |
           echo "SNAPSHOT_SOURCE=${SNAPSHOT_SOURCE}"
           echo "SNAPSHOT_PROJECT_ID=${SNAPSHOT_PROJECT_ID}"
@@ -166,6 +179,10 @@ jobs:
         run: npm ci --no-fund --no-audit
 
       - name: Build snapshot report
+        env:
+          SNAPSHOT_SOURCE: ${{ steps.resolve_source.outputs.snapshot_source }}
+          SNAPSHOT_FROM: ${{ steps.resolve_window.outputs.snapshot_from }}
+          SNAPSHOT_TO: ${{ steps.resolve_window.outputs.snapshot_to }}
         run: npm run snapshot:build
 
       - name: Upload GitHub Pages artifact
