@@ -25,6 +25,28 @@ const rawPhaseToStage: Record<string, EventStage> = {
   primary_failure: "provider_request",
 };
 
+const prefixedToolFlows: Array<{
+  pattern: RegExp;
+  toolFlow: ToolFlowName;
+}> = [
+  {
+    pattern: /^\[ImageGeneration\]\s*/i,
+    toolFlow: "image_asset_generate",
+  },
+  {
+    pattern: /^\[ImageVariation\]\s*/i,
+    toolFlow: "image_variation_generate",
+  },
+  {
+    pattern: /^\[SpritesheetGeneration\]\s*/i,
+    toolFlow: "spritesheet_generate",
+  },
+  {
+    pattern: /^\[SpritesheetVariation\]\s*/i,
+    toolFlow: "spritesheet_variation_generate",
+  },
+];
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -59,6 +81,11 @@ function getPayloadValue(
   return undefined;
 }
 
+function deriveToolFlowFromPrefix(message: string): ToolFlowName | undefined {
+  return prefixedToolFlows.find((candidate) => candidate.pattern.test(message))
+    ?.toolFlow;
+}
+
 function deriveMessage(entry: RawLogEntryRecord): string {
   const payload = entry.jsonPayload ?? {};
   return (
@@ -84,6 +111,11 @@ function deriveToolFlow(
     explicitFlow === "spritesheet_variation_generate"
   ) {
     return explicitFlow;
+  }
+
+  const prefixedFlow = deriveToolFlowFromPrefix(message);
+  if (prefixedFlow) {
+    return prefixedFlow;
   }
 
   const matched = messagePatterns.find((candidate) =>
@@ -229,4 +261,16 @@ export function parseLogEntry(entry: RawLogEntryRecord): ParsedLogEvent {
 
 export function parseLogEntries(entries: RawLogEntryRecord[]): ParsedLogEvent[] {
   return entries.map((entry) => parseLogEntry(entry));
+}
+
+export function isRelevantAssetGenerationEvent(event: ParsedLogEvent): boolean {
+  return Boolean(
+    deriveToolFlowFromPrefix(event.message) ||
+      [
+        "image_asset_generate",
+        "image_variation_generate",
+        "spritesheet_generate",
+        "spritesheet_variation_generate",
+      ].includes(String(event.metadata.toolFlow ?? event.metadata.tool_flow ?? event.metadata.flow ?? "")),
+  );
 }

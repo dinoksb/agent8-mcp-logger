@@ -5,7 +5,10 @@ import { loadSnapshotConfig } from "../src/config/env.js";
 import type { ParsedLogEvent } from "../src/domain/types.js";
 import { classifyRuns } from "../src/domain/classification.js";
 import { correlateEvents } from "../src/domain/correlation.js";
-import { parseLogEntries } from "../src/parsing/agent8-log-parser.js";
+import {
+  isRelevantAssetGenerationEvent,
+  parseLogEntries,
+} from "../src/parsing/agent8-log-parser.js";
 import {
   buildReportPayload,
   buildRunsPayload,
@@ -30,10 +33,16 @@ async function main(): Promise<void> {
           notes: ["Using bundled sample entries instead of Cloud Logging."],
         };
   const rawEntries = fetchResult.entries;
-  const events = parseLogEntries(rawEntries);
-  const recognizedEventCount = countRecognizedEvents(events);
-  const correlatedRuns = correlateEvents(events);
-  const classified = classifyRuns(correlatedRuns, events);
+  const parsedEvents = parseLogEntries(rawEntries);
+  const relevantEvents = parsedEvents.filter((event) =>
+    isRelevantAssetGenerationEvent(event),
+  );
+  const recognizedEventCount = countRecognizedEvents(relevantEvents);
+  const filteredOutEventCount = parsedEvents.length - relevantEvents.length;
+  const correlatedRuns = correlateEvents(relevantEvents).filter(
+    (run) => run.toolFlow !== "unknown",
+  );
+  const classified = classifyRuns(correlatedRuns, relevantEvents);
   const generatedAt = new Date().toISOString();
   const diagnosticsNotes = [...fetchResult.notes];
 
@@ -51,6 +60,12 @@ async function main(): Promise<void> {
     );
   }
 
+  if (filteredOutEventCount > 0) {
+    diagnosticsNotes.push(
+      `Filtered out ${filteredOutEventCount} non-image/spritesheet service logs that did not match the source repo prefixes.`,
+    );
+  }
+
   const report = buildReportPayload({
     generatedAt,
     coveredFrom: config.query.from,
@@ -58,7 +73,7 @@ async function main(): Promise<void> {
     query: config.query,
     diagnostics: {
       fetchedEntryCount: rawEntries.length,
-      parsedEventCount: events.length,
+      parsedEventCount: parsedEvents.length,
       recognizedEventCount,
       runCount: classified.runs.length,
       fetchStrategy: fetchResult.strategy,

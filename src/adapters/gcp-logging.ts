@@ -2,15 +2,15 @@ import type { LogQuery, RawLogEntryRecord } from "../domain/types.js";
 import { normalizeRawLogEntries } from "../parsing/raw-log-normalizer.js";
 
 const flowSearchTerms: Record<string, string> = {
-  image_asset_generate: "ImageGeneration",
-  image_variation_generate: "ImageVariation",
-  spritesheet_generate: "SpritesheetGeneration",
-  spritesheet_variation_generate: "SpritesheetVariation",
+  image_asset_generate: "[ImageGeneration]",
+  image_variation_generate: "[ImageVariation]",
+  spritesheet_generate: "[SpritesheetGeneration]",
+  spritesheet_variation_generate: "[SpritesheetVariation]",
 };
 
 interface LoggingFilterOptions {
   includeLocation: boolean;
-  includeSearchTerms: boolean;
+  includeMessagePrefixes: boolean;
 }
 
 export interface CloudLoggingFetchResult {
@@ -34,14 +34,19 @@ function buildLoggingFilter(
     lines.splice(1, 0, `resource.labels.location="${query.location}"`);
   }
 
-  const searchTerms = options.includeSearchTerms
+  const messagePrefixes = options.includeMessagePrefixes
     ? query.toolFlows
         .map((flow) => flowSearchTerms[flow])
         .filter((value): value is string => Boolean(value))
     : [];
-  if (searchTerms.length > 0) {
+  if (messagePrefixes.length > 0) {
     lines.push(
-      `(${searchTerms.map((term) => `SEARCH("${term}")`).join(" OR ")})`,
+      `(${messagePrefixes
+        .map(
+          (prefix) =>
+            `textPayload:"${prefix}" OR jsonPayload.message:"${prefix}"`,
+        )
+        .join(" OR ")})`,
     );
   }
 
@@ -113,18 +118,18 @@ export async function fetchCloudLoggingEntries(
   function pushAttempt(
     name: string,
     includeLocation: boolean,
-    includeSearchTerms: boolean,
+    includeMessagePrefixes: boolean,
   ): void {
     if (seenStrategies.has(name)) {
       return;
     }
 
     seenStrategies.add(name);
-    attempts.push({ name, includeLocation, includeSearchTerms });
+    attempts.push({ name, includeLocation, includeMessagePrefixes });
   }
 
-  pushAttempt("service+location+search_terms", Boolean(query.location), true);
-  pushAttempt("service+search_terms", false, true);
+  pushAttempt("service+location+message_prefixes", Boolean(query.location), true);
+  pushAttempt("service+message_prefixes", false, true);
   pushAttempt("service+location", Boolean(query.location), false);
   pushAttempt("service_only", false, false);
 
@@ -135,7 +140,7 @@ export async function fetchCloudLoggingEntries(
     );
 
     if (entries.length > 0) {
-      if (attempt.name !== "service+location+search_terms") {
+      if (attempt.name !== "service+location+message_prefixes") {
         notes.push(
           `No entries matched the strict filter, so the fetch retried with ${attempt.name}.`,
         );
