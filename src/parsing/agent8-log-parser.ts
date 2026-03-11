@@ -85,6 +85,45 @@ function getPayloadValue(
   return undefined;
 }
 
+function getPayloadValueDeep(
+  payload: Record<string, unknown>,
+  ...keys: string[]
+): unknown {
+  const directValue = getPayloadValue(payload, ...keys);
+  if (directValue !== undefined) {
+    return directValue;
+  }
+
+  const queue: unknown[] = Object.values(payload);
+  const visited = new Set<unknown>();
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current || visited.has(current)) {
+      continue;
+    }
+
+    if (isRecord(current)) {
+      visited.add(current);
+
+      const nestedValue = getPayloadValue(current, ...keys);
+      if (nestedValue !== undefined) {
+        return nestedValue;
+      }
+
+      queue.push(...Object.values(current));
+      continue;
+    }
+
+    if (Array.isArray(current)) {
+      visited.add(current);
+      queue.push(...current);
+    }
+  }
+
+  return undefined;
+}
+
 function deriveToolFlowFromPrefix(message: string): ToolFlowName | undefined {
   return prefixedToolFlows.find((candidate) => candidate.pattern.test(message))
     ?.toolFlow;
@@ -490,8 +529,12 @@ export function parseLogEntry(entry: RawLogEntryRecord): ParsedLogEvent {
     toolFlow,
     message,
     stage,
-    operationId: asString(getPayloadValue(payload, "operationId", "operation_id")),
-    requestId: asString(getPayloadValue(payload, "requestId", "request_id")),
+    operationId: asString(
+      getPayloadValueDeep(payload, "operationId", "operation_id"),
+    ),
+    requestId: asString(
+      getPayloadValueDeep(payload, "requestId", "request_id"),
+    ),
     trace: entry.trace,
     spanId: entry.spanId,
     provider: deriveProvider(message, payload),
