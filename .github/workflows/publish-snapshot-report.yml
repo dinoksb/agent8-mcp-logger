@@ -27,7 +27,7 @@ on:
         required: false
         type: string
   schedule:
-    - cron: "0 */6 * * *"
+    - cron: "5 * * * *"
 
 permissions:
   contents: read
@@ -45,13 +45,12 @@ jobs:
       SNAPSHOT_PROJECT_ID: ${{ vars.SNAPSHOT_PROJECT_ID || 'agent8-455106' }}
       SNAPSHOT_SERVICE_NAME: ${{ vars.SNAPSHOT_SERVICE_NAME }}
       SNAPSHOT_LOCATION: ${{ vars.SNAPSHOT_LOCATION }}
-      SNAPSHOT_FROM: ${{ github.event.inputs.snapshot_from || vars.SNAPSHOT_FROM }}
-      SNAPSHOT_TO: ${{ github.event.inputs.snapshot_to || vars.SNAPSHOT_TO }}
       SNAPSHOT_LIMIT: ${{ github.event.inputs.snapshot_limit || vars.SNAPSHOT_LIMIT || '1000' }}
       SNAPSHOT_TOOL_FLOWS: ${{ vars.SNAPSHOT_TOOL_FLOWS }}
       HAS_GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY != '' }}
       HAS_WIF_CONFIG: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && vars.GCP_SERVICE_ACCOUNT != '' }}
       REPO_SNAPSHOT_SOURCE: ${{ vars.SNAPSHOT_SOURCE }}
+      REPO_SNAPSHOT_WINDOW_HOURS: ${{ vars.SNAPSHOT_WINDOW_HOURS || '1' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -91,6 +90,37 @@ jobs:
 
           echo "SNAPSHOT_SOURCE=${SOURCE}" >> "${GITHUB_ENV}"
           echo "Resolved snapshot source: ${SOURCE}"
+
+      - name: Resolve snapshot window
+        shell: bash
+        run: |
+          INPUT_FROM="${{ github.event.inputs.snapshot_from }}"
+          INPUT_TO="${{ github.event.inputs.snapshot_to }}"
+          WINDOW_HOURS="${REPO_SNAPSHOT_WINDOW_HOURS}"
+
+          if [ -n "${INPUT_FROM}" ] || [ -n "${INPUT_TO}" ]; then
+            if [ -z "${INPUT_FROM}" ] || [ -z "${INPUT_TO}" ]; then
+              echo "snapshot_from and snapshot_to must be provided together."
+              exit 1
+            fi
+
+            FROM="${INPUT_FROM}"
+            TO="${INPUT_TO}"
+          else
+            if ! [[ "${WINDOW_HOURS}" =~ ^[0-9]+$ ]] || [ "${WINDOW_HOURS}" -le 0 ]; then
+              WINDOW_HOURS="1"
+            fi
+
+            NOW_EPOCH="$(date -u +%s)"
+            END_EPOCH="$(( NOW_EPOCH / 3600 * 3600 - 1 ))"
+            START_EPOCH="$(( END_EPOCH - (WINDOW_HOURS * 3600) + 1 ))"
+            FROM="$(date -u -d "@${START_EPOCH}" +"%Y-%m-%dT%H:%M:%SZ")"
+            TO="$(date -u -d "@${END_EPOCH}" +"%Y-%m-%dT%H:%M:%SZ")"
+          fi
+
+          echo "SNAPSHOT_FROM=${FROM}" >> "${GITHUB_ENV}"
+          echo "SNAPSHOT_TO=${TO}" >> "${GITHUB_ENV}"
+          echo "Resolved snapshot window: ${FROM} -> ${TO}"
 
       - name: Authenticate to Google Cloud with Workload Identity Federation
         if: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && vars.GCP_SERVICE_ACCOUNT != '' }}

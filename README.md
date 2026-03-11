@@ -49,6 +49,7 @@ If `SNAPSHOT_SOURCE` is omitted, the script uses sample data unless enough GCP p
 - `SNAPSHOT_FROM`
 - `SNAPSHOT_TO`
 - `SNAPSHOT_LIMIT`
+- `SNAPSHOT_WINDOW_HOURS`
 - `SNAPSHOT_TOOL_FLOWS`
 - `SNAPSHOT_OUTPUT_DIR`
 
@@ -98,6 +99,8 @@ The workflow also supports manual `workflow_dispatch` inputs for:
 - `snapshot_from`
 - `snapshot_to`
 - `snapshot_limit`
+
+For automatic `push` and hourly `schedule` runs, the workflow ignores fixed `SNAPSHOT_FROM` / `SNAPSHOT_TO` repository variables and resolves a rolling closed window instead. By default it publishes the previous 1 hour window. You can change that with `SNAPSHOT_WINDOW_HOURS`.
 
 If GCP auth or Cloud Run identifiers are not configured yet, keep `SNAPSHOT_SOURCE=sample` so GitHub Pages still publishes a demo snapshot instead of failing.
 
