@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-03-11T15:14:53.578Z",
-  "coveredFrom": "2026-03-10T15:14:53.575Z",
-  "coveredTo": "2026-03-11T15:14:53.575Z",
+  "generatedAt": "2026-03-11T16:16:41.227Z",
+  "coveredFrom": "2026-03-10T16:16:41.224Z",
+  "coveredTo": "2026-03-11T16:16:41.224Z",
   "summary": {
     "totalRuns": 4,
     "completedRuns": 3,
@@ -19,6 +19,16 @@
       "image_variation_generate": 1,
       "spritesheet_variation_generate": 1
     }
+  },
+  "diagnostics": {
+    "fetchedEntryCount": 27,
+    "parsedEventCount": 27,
+    "recognizedEventCount": 27,
+    "runCount": 4,
+    "fetchStrategy": "sample_data",
+    "notes": [
+      "Using bundled sample entries instead of Cloud Logging."
+    ]
   },
   "runs": [
     {

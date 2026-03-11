@@ -6,7 +6,7 @@ on:
       snapshot_source:
         description: Snapshot source
         required: false
-        default: sample
+        default: gcp
         type: choice
         options:
           - sample

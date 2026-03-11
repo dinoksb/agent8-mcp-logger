@@ -21,12 +21,22 @@ export interface ReportSummary {
   runsByFlow: Partial<Record<ToolFlowName, number>>;
 }
 
+export interface SnapshotDiagnostics {
+  fetchedEntryCount: number;
+  parsedEventCount: number;
+  recognizedEventCount: number;
+  runCount: number;
+  fetchStrategy: string;
+  notes: string[];
+}
+
 export interface ReportPayload {
   generatedAt: string;
   coveredFrom: string;
   coveredTo: string;
   query: LogQuery;
   summary: ReportSummary;
+  diagnostics: SnapshotDiagnostics;
   runs: CorrelatedRun[];
   incidents: IncidentReport[];
 }
@@ -36,7 +46,7 @@ export interface RunsPayload {
   coveredFrom: string;
   coveredTo: string;
   summary: ReportSummary;
+  diagnostics: SnapshotDiagnostics;
   runs: CorrelatedRun[];
   incidents: IncidentReport[];
 }
-

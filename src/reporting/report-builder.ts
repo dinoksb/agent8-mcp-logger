@@ -2,6 +2,7 @@ import type {
   ReportPayload,
   ReportSummary,
   RunsPayload,
+  SnapshotDiagnostics,
 } from "../contracts/report-payload.js";
 import type {
   CorrelatedRun,
@@ -49,6 +50,7 @@ export function buildReportPayload(input: {
   coveredFrom: string;
   coveredTo: string;
   query: LogQuery;
+  diagnostics: SnapshotDiagnostics;
   runs: CorrelatedRun[];
   incidents: IncidentReport[];
 }): ReportPayload {
@@ -58,6 +60,7 @@ export function buildReportPayload(input: {
     coveredTo: input.coveredTo,
     query: input.query,
     summary: buildSummary(input.runs, input.incidents),
+    diagnostics: input.diagnostics,
     runs: input.runs,
     incidents: input.incidents,
   };
@@ -69,8 +72,8 @@ export function buildRunsPayload(report: ReportPayload): RunsPayload {
     coveredFrom: report.coveredFrom,
     coveredTo: report.coveredTo,
     summary: report.summary,
+    diagnostics: report.diagnostics,
     runs: report.runs,
     incidents: report.incidents,
   };
 }
-

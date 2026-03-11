@@ -8,7 +8,21 @@ const flowSearchTerms: Record<string, string> = {
   spritesheet_variation_generate: "SpritesheetVariation",
 };
 
-function buildLoggingFilter(query: LogQuery): string {
+interface LoggingFilterOptions {
+  includeLocation: boolean;
+  includeSearchTerms: boolean;
+}
+
+export interface CloudLoggingFetchResult {
+  entries: RawLogEntryRecord[];
+  strategy: string;
+  notes: string[];
+}
+
+function buildLoggingFilter(
+  query: LogQuery,
+  options: LoggingFilterOptions,
+): string {
   const lines = [
     'resource.type="cloud_run_revision"',
     `resource.labels.service_name="${query.serviceName ?? ""}"`,
@@ -16,13 +30,15 @@ function buildLoggingFilter(query: LogQuery): string {
     `timestamp <= "${query.to}"`,
   ];
 
-  if (query.location) {
+  if (options.includeLocation && query.location) {
     lines.splice(1, 0, `resource.labels.location="${query.location}"`);
   }
 
-  const searchTerms = query.toolFlows
-    .map((flow) => flowSearchTerms[flow])
-    .filter((value): value is string => Boolean(value));
+  const searchTerms = options.includeSearchTerms
+    ? query.toolFlows
+        .map((flow) => flowSearchTerms[flow])
+        .filter((value): value is string => Boolean(value))
+    : [];
   if (searchTerms.length > 0) {
     lines.push(
       `(${searchTerms.map((term) => `SEARCH("${term}")`).join(" OR ")})`,
@@ -54,9 +70,30 @@ function toSerializableEntry(entry: any, index: number): unknown {
   };
 }
 
+async function getEntries(
+  logging: {
+    getEntries: (
+      options: Record<string, unknown>,
+    ) => Promise<[any[], unknown, unknown]>;
+  },
+  query: LogQuery,
+  options: LoggingFilterOptions,
+): Promise<RawLogEntryRecord[]> {
+  const filter = buildLoggingFilter(query, options);
+  const [entries] = await logging.getEntries({
+    filter,
+    pageSize: query.limit,
+    orderBy: "timestamp asc",
+  });
+
+  return normalizeRawLogEntries(
+    entries.map((entry: any, index: number) => toSerializableEntry(entry, index)),
+  );
+}
+
 export async function fetchCloudLoggingEntries(
   query: LogQuery,
-): Promise<RawLogEntryRecord[]> {
+): Promise<CloudLoggingFetchResult> {
   if (!query.projectId || !query.serviceName) {
     throw new Error(
       "SNAPSHOT_PROJECT_ID and SNAPSHOT_SERVICE_NAME are required for GCP snapshots.",
@@ -65,13 +102,60 @@ export async function fetchCloudLoggingEntries(
 
   const { Logging } = await import("@google-cloud/logging");
   const logging = new Logging({ projectId: query.projectId });
-  const [entries] = await logging.getEntries({
-    filter: buildLoggingFilter(query),
-    pageSize: query.limit,
-    orderBy: "timestamp asc",
-  });
+  const attempts: Array<
+    LoggingFilterOptions & {
+      name: string;
+    }
+  > = [];
+  const seenStrategies = new Set<string>();
+  const notes: string[] = [];
 
-  return normalizeRawLogEntries(
-    entries.map((entry: any, index: number) => toSerializableEntry(entry, index)),
+  function pushAttempt(
+    name: string,
+    includeLocation: boolean,
+    includeSearchTerms: boolean,
+  ): void {
+    if (seenStrategies.has(name)) {
+      return;
+    }
+
+    seenStrategies.add(name);
+    attempts.push({ name, includeLocation, includeSearchTerms });
+  }
+
+  pushAttempt("service+location+search_terms", Boolean(query.location), true);
+  pushAttempt("service+search_terms", false, true);
+  pushAttempt("service+location", Boolean(query.location), false);
+  pushAttempt("service_only", false, false);
+
+  for (const attempt of attempts) {
+    const entries = await getEntries(logging, query, attempt);
+    console.log(
+      `Cloud Logging fetch attempt ${attempt.name} returned ${entries.length} entries.`,
+    );
+
+    if (entries.length > 0) {
+      if (attempt.name !== "service+location+search_terms") {
+        notes.push(
+          `No entries matched the strict filter, so the fetch retried with ${attempt.name}.`,
+        );
+      }
+
+      return {
+        entries,
+        strategy: attempt.name,
+        notes,
+      };
+    }
+  }
+
+  notes.push(
+    "Cloud Logging returned zero entries for every filter strategy tried for this service and time window.",
   );
+
+  return {
+    entries: [],
+    strategy: attempts.at(-1)?.name ?? "service_only",
+    notes,
+  };
 }

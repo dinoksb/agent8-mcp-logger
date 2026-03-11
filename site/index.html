@@ -250,6 +250,12 @@
         </div>
 
         <div class="panel">
+          <h2>Diagnostics</h2>
+          <div id="diagnostics" class="summary-grid"></div>
+          <div id="diagnostic-notes" class="stack"></div>
+        </div>
+
+        <div class="panel">
           <h2>Incidents</h2>
           <div id="incidents" class="incidents"></div>
         </div>
@@ -264,6 +270,8 @@
     <script type="module">
       const metaNode = document.querySelector("#meta");
       const summaryNode = document.querySelector("#summary");
+      const diagnosticsNode = document.querySelector("#diagnostics");
+      const diagnosticNotesNode = document.querySelector("#diagnostic-notes");
       const incidentsNode = document.querySelector("#incidents");
       const runsNode = document.querySelector("#runs");
 
@@ -300,6 +308,7 @@
           ["Source", report.query.source],
           ["Service", report.query.serviceName ?? "sample-service"],
           ["Project", report.query.projectId ?? "sample-project"],
+          ["Location", report.query.location ?? "not-set"],
         ];
 
         metaNode.innerHTML = meta
@@ -312,6 +321,41 @@
             `,
           )
           .join("");
+      }
+
+      function renderDiagnostics(report) {
+        const diagnostics = report.diagnostics;
+        if (!diagnostics) {
+          diagnosticsNode.innerHTML =
+            '<div class="empty">No diagnostics were included in this snapshot payload.</div>';
+          diagnosticNotesNode.innerHTML = "";
+          return;
+        }
+
+        const cards = [
+          ["Fetched entries", diagnostics.fetchedEntryCount],
+          ["Parsed events", diagnostics.parsedEventCount],
+          ["Recognized events", diagnostics.recognizedEventCount],
+          ["Correlated runs", diagnostics.runCount],
+          ["Fetch strategy", diagnostics.fetchStrategy],
+        ];
+
+        diagnosticsNode.innerHTML = cards
+          .map(
+            ([label, value]) => `
+              <article class="summary-card">
+                <div class="subtle">${label}</div>
+                <strong>${value}</strong>
+              </article>
+            `,
+          )
+          .join("");
+
+        diagnosticNotesNode.innerHTML = diagnostics.notes.length
+          ? diagnostics.notes
+              .map((note) => `<div class="empty">${note}</div>`)
+              .join("")
+          : "";
       }
 
       function renderIncidents(report) {
@@ -337,8 +381,16 @@
 
       function renderRuns(report) {
         if (!report.runs.length) {
+          const diagnostics = report.diagnostics;
+          const reason =
+            diagnostics?.fetchedEntryCount === 0
+              ? "Cloud Logging returned zero entries for this query. Check service name, region, and time window."
+              : diagnostics?.recognizedEventCount === 0
+                ? "Logs were fetched, but the parser recognized zero Agent8 events. Live log patterns likely differ from the current parser rules."
+                : "No runs were found for the selected window.";
+
           runsNode.innerHTML =
-            '<div class="empty">No runs were found for the selected window.</div>';
+            `<div class="empty">${reason}</div>`;
           return;
         }
 
@@ -384,11 +436,14 @@
           const report = await response.json();
           renderMeta(report);
           renderSummary(report);
+          renderDiagnostics(report);
           renderIncidents(report);
           renderRuns(report);
         } catch (error) {
           summaryNode.innerHTML =
             '<div class="empty">Snapshot data is not available yet. Run the snapshot build script or GitHub Actions workflow first.</div>';
+          diagnosticsNode.innerHTML = "";
+          diagnosticNotesNode.innerHTML = "";
           incidentsNode.innerHTML = "";
           runsNode.innerHTML = "";
           metaNode.innerHTML = `
@@ -405,4 +460,3 @@
     </script>
   </body>
 </html>
-
