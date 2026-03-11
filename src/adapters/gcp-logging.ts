@@ -130,8 +130,6 @@ export async function fetchCloudLoggingEntries(
 
   pushAttempt("service+location+message_prefixes", Boolean(query.location), true);
   pushAttempt("service+message_prefixes", false, true);
-  pushAttempt("service+location", Boolean(query.location), false);
-  pushAttempt("service_only", false, false);
 
   for (const attempt of attempts) {
     const entries = await getEntries(logging, query, attempt);
@@ -155,12 +153,12 @@ export async function fetchCloudLoggingEntries(
   }
 
   notes.push(
-    "Cloud Logging returned zero entries for every filter strategy tried for this service and time window.",
+    "Cloud Logging returned zero image/spritesheet log entries for every prefix filter tried for this service and time window.",
   );
 
   return {
     entries: [],
-    strategy: attempts.at(-1)?.name ?? "service_only",
+    strategy: attempts.at(-1)?.name ?? "service+message_prefixes",
     notes,
   };
 }
