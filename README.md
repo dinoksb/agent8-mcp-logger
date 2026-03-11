@@ -61,12 +61,13 @@ The included workflow publishes the `site/` directory to GitHub Pages.
 Repository:
 
 - GitHub repo: `https://github.com/dinoksb/agent8-mcp-logger.git`
-- default GCP project: `agent8-image-mcp-server`
+- default GCP project: `agent8-455106`
+- default Cloud Run service: `agent8-image-mcp-server`
 
 Recommended repository variables:
 
 - `SNAPSHOT_SOURCE`
-- `SNAPSHOT_PROJECT_ID=agent8-image-mcp-server`
+- `SNAPSHOT_PROJECT_ID=agent8-455106`
 - `SNAPSHOT_SERVICE_NAME`
 - `SNAPSHOT_LOCATION`
 - `SNAPSHOT_LIMIT`
@@ -86,8 +87,8 @@ Recommended auth order:
 Recommended phase-1 repository variable set:
 
 - `SNAPSHOT_SOURCE=gcp`
-- `SNAPSHOT_PROJECT_ID=agent8-image-mcp-server`
-- `SNAPSHOT_SERVICE_NAME=<your Cloud Run service name>`
+- `SNAPSHOT_PROJECT_ID=agent8-455106`
+- `SNAPSHOT_SERVICE_NAME=agent8-image-mcp-server`
 - `SNAPSHOT_LOCATION=<your Cloud Run region>`
 - `SNAPSHOT_LIMIT=1000`
 

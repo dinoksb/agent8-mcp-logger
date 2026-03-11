@@ -40,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SNAPSHOT_SOURCE: ${{ github.event.inputs.snapshot_source || vars.SNAPSHOT_SOURCE || 'sample' }}
-      SNAPSHOT_PROJECT_ID: ${{ vars.SNAPSHOT_PROJECT_ID || 'agent8-image-mcp-server' }}
+      SNAPSHOT_PROJECT_ID: ${{ vars.SNAPSHOT_PROJECT_ID || 'agent8-455106' }}
       SNAPSHOT_SERVICE_NAME: ${{ vars.SNAPSHOT_SERVICE_NAME }}
       SNAPSHOT_LOCATION: ${{ vars.SNAPSHOT_LOCATION }}
       SNAPSHOT_FROM: ${{ github.event.inputs.snapshot_from || vars.SNAPSHOT_FROM }}
@@ -64,7 +64,7 @@ jobs:
         if: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && vars.GCP_SERVICE_ACCOUNT != '' }}
         uses: google-github-actions/auth@v3
         with:
-          project_id: ${{ vars.SNAPSHOT_PROJECT_ID || 'agent8-image-mcp-server' }}
+          project_id: ${{ vars.SNAPSHOT_PROJECT_ID || 'agent8-455106' }}
           workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
           create_credentials_file: true
@@ -74,7 +74,7 @@ jobs:
         if: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER == '' && secrets.GCP_SERVICE_ACCOUNT_KEY != '' }}
         uses: google-github-actions/auth@v3
         with:
-          project_id: ${{ vars.SNAPSHOT_PROJECT_ID || 'agent8-image-mcp-server' }}
+          project_id: ${{ vars.SNAPSHOT_PROJECT_ID || 'agent8-455106' }}
           credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
           create_credentials_file: true
           export_environment_variables: true

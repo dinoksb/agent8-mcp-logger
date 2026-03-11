@@ -8,6 +8,10 @@ Target repository:
 
 Target project:
 
+- `agent8-455106`
+
+Target Cloud Run service:
+
 - `agent8-image-mcp-server`
 
 ## Why This Is Recommended
@@ -43,7 +47,7 @@ These names are safe defaults for this repo:
 Run these with `gcloud` authenticated to the target project.
 
 ```bash
-PROJECT_ID="agent8-image-mcp-server"
+PROJECT_ID="agent8-455106"
 PROJECT_NUMBER="$(gcloud projects describe "${PROJECT_ID}" --format="value(projectNumber)")"
 REPO="dinoksb/agent8-mcp-logger"
 POOL_ID="github"
@@ -124,13 +128,13 @@ Set these repository variables in GitHub:
 - `GCP_WORKLOAD_IDENTITY_PROVIDER`
   - Example shape: `projects/123456789/locations/global/workloadIdentityPools/github/providers/agent8-mcp-logger`
 - `GCP_SERVICE_ACCOUNT`
-  - Example: `agent8-mcp-logger-gha@agent8-image-mcp-server.iam.gserviceaccount.com`
+  - Example: `agent8-mcp-logger-gha@agent8-455106.iam.gserviceaccount.com`
 - `SNAPSHOT_SOURCE`
   - `gcp`
 - `SNAPSHOT_PROJECT_ID`
-  - `agent8-image-mcp-server`
+  - `agent8-455106`
 - `SNAPSHOT_SERVICE_NAME`
-  - your Cloud Run service name
+  - `agent8-image-mcp-server`
 - `SNAPSHOT_LOCATION`
   - your Cloud Run region
 - `SNAPSHOT_LIMIT`
