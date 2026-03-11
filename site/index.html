@@ -89,6 +89,20 @@
         background: var(--surface-strong);
       }
 
+      .alert {
+        margin-top: 18px;
+        padding: 14px 16px;
+        border-radius: 18px;
+        border: 1px solid rgba(201, 124, 0, 0.24);
+        background: rgba(201, 124, 0, 0.08);
+        color: var(--ink);
+      }
+
+      .alert strong {
+        display: block;
+        margin-bottom: 6px;
+      }
+
       .summary-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -135,6 +149,81 @@
 
       .incident[data-severity="warning"] {
         border-color: rgba(201, 124, 0, 0.3);
+      }
+
+      .run-card {
+        padding: 16px;
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: var(--surface-strong);
+      }
+
+      .run-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: flex-start;
+      }
+
+      .run-title {
+        margin: 8px 0 6px;
+        font-size: 18px;
+      }
+
+      .run-meta {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .run-meta div {
+        padding: 12px 14px;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.55);
+      }
+
+      .run-meta strong,
+      .stage-card strong {
+        display: block;
+        margin-top: 4px;
+      }
+
+      details {
+        margin-top: 14px;
+      }
+
+      summary {
+        cursor: pointer;
+        font-weight: 700;
+      }
+
+      .stage-list {
+        display: grid;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .stage-card {
+        padding: 12px 14px;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.55);
+      }
+
+      .links {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 16px;
+      }
+
+      .links a {
+        color: var(--accent);
+        font-weight: 700;
+        text-decoration: none;
       }
 
       .pill {
@@ -241,6 +330,11 @@
           a later real-time backend.
         </p>
         <div id="meta" class="meta"></div>
+        <div id="alerts"></div>
+        <div class="links">
+          <a href="./data/report.json" target="_blank" rel="noreferrer">Open report.json</a>
+          <a href="./data/runs.json" target="_blank" rel="noreferrer">Open runs.json</a>
+        </div>
       </section>
 
       <section class="stack">
@@ -269,6 +363,7 @@
 
     <script type="module">
       const metaNode = document.querySelector("#meta");
+      const alertsNode = document.querySelector("#alerts");
       const summaryNode = document.querySelector("#summary");
       const diagnosticsNode = document.querySelector("#diagnostics");
       const diagnosticNotesNode = document.querySelector("#diagnostic-notes");
@@ -277,6 +372,8 @@
 
       const fmt = (value) => new Date(value).toLocaleString();
       const labelCase = (value) => value.replaceAll("_", " ");
+      const fmtMs = (value) =>
+        typeof value === "number" ? `${(value / 1000).toFixed(1)}s` : "-";
 
       function renderSummary(report) {
         const cards = [
@@ -298,6 +395,30 @@
             `,
           )
           .join("");
+      }
+
+      function renderAlerts(report) {
+        const alerts = [];
+
+        if (report.query.source === "sample") {
+          alerts.push(`
+            <div class="alert">
+              <strong>Sample snapshot is deployed</strong>
+              This page is currently showing bundled demo data, not live Cloud Logging results. Run the workflow with <code>snapshot_source=gcp</code> to publish real logs.
+            </div>
+          `);
+        }
+
+        if (report.diagnostics?.fetchedEntryCount === 0) {
+          alerts.push(`
+            <div class="alert">
+              <strong>Cloud Logging returned zero entries</strong>
+              The current service, region, or time window did not produce matching logs for this snapshot.
+            </div>
+          `);
+        }
+
+        alertsNode.innerHTML = alerts.join("");
       }
 
       function renderMeta(report) {
@@ -394,36 +515,66 @@
           return;
         }
 
-        runsNode.innerHTML = `
-          <table>
-            <thead>
-              <tr>
-                <th>Run</th>
-                <th>Flow</th>
-                <th>Status</th>
-                <th>Bottleneck</th>
-                <th>Total</th>
-                <th>Provider chain</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${report.runs
-                .map(
-                  (run) => `
-                    <tr>
-                      <td><code>${run.runId}</code></td>
-                      <td>${labelCase(run.toolFlow)}</td>
-                      <td>${labelCase(run.status)}</td>
-                      <td>${run.bottleneckStage ? labelCase(run.bottleneckStage) : "-"}</td>
-                      <td>${run.totalDurationMs ? `${(run.totalDurationMs / 1000).toFixed(1)}s` : "-"}</td>
-                      <td>${run.providerChain.length ? run.providerChain.join(" -> ") : "-"}</td>
-                    </tr>
-                  `,
-                )
-                .join("")}
-            </tbody>
-          </table>
-        `;
+        runsNode.innerHTML = report.runs
+          .map(
+            (run) => `
+              <article class="run-card">
+                <div class="run-head">
+                  <div>
+                    <div class="pill ${run.status === "failed" ? "critical" : run.status === "handed_off" ? "warning" : ""}">${labelCase(run.status)}</div>
+                    <h3 class="run-title">${labelCase(run.toolFlow)}</h3>
+                    <div class="subtle"><code>${run.runId}</code></div>
+                  </div>
+                  <div class="subtle">
+                    Started: ${fmt(run.startedAt)}<br />
+                    Ended: ${run.endedAt ? fmt(run.endedAt) : "-"}<br />
+                    Total: ${fmtMs(run.totalDurationMs)}
+                  </div>
+                </div>
+
+                <div class="run-meta">
+                  <div>
+                    <span class="subtle">Providers</span>
+                    <strong>${run.providerChain.length ? run.providerChain.join(" -> ") : "-"}</strong>
+                  </div>
+                  <div>
+                    <span class="subtle">Bottleneck</span>
+                    <strong>${run.bottleneckStage ? `${labelCase(run.bottleneckStage)} (${fmtMs(run.bottleneckDurationMs)})` : "-"}</strong>
+                  </div>
+                  <div>
+                    <span class="subtle">Operation / Request</span>
+                    <strong><code>${run.operationId ?? "-"}</code>${run.requestId ? `<br /><code>${run.requestId}</code>` : ""}</strong>
+                  </div>
+                  <div>
+                    <span class="subtle">Failure / Timeout</span>
+                    <strong>${run.failureKind ? labelCase(run.failureKind) : "-"}${run.timeoutKind ? `<br />${labelCase(run.timeoutKind)}` : ""}</strong>
+                  </div>
+                </div>
+
+                <details>
+                  <summary>Stages (${run.stages.length})</summary>
+                  <div class="stage-list">
+                    ${run.stages
+                      .map(
+                        (stage) => `
+                          <div class="stage-card">
+                            <span class="subtle">${labelCase(stage.stage)}</span>
+                            <strong>${fmtMs(stage.durationMs)}</strong>
+                            <div class="subtle">
+                              Start: ${stage.startedAt ? fmt(stage.startedAt) : "-"}<br />
+                              End: ${stage.endedAt ? fmt(stage.endedAt) : "-"}<br />
+                              Evidence events: ${stage.sourceEventIds.length}
+                            </div>
+                          </div>
+                        `,
+                      )
+                      .join("")}
+                  </div>
+                </details>
+              </article>
+            `,
+          )
+          .join("");
       }
 
       async function boot() {
@@ -435,11 +586,13 @@
 
           const report = await response.json();
           renderMeta(report);
+          renderAlerts(report);
           renderSummary(report);
           renderDiagnostics(report);
           renderIncidents(report);
           renderRuns(report);
         } catch (error) {
+          alertsNode.innerHTML = "";
           summaryNode.innerHTML =
             '<div class="empty">Snapshot data is not available yet. Run the snapshot build script or GitHub Actions workflow first.</div>';
           diagnosticsNode.innerHTML = "";
