@@ -1,0 +1,414 @@
+{
+  "generatedAt": "2026-03-11T15:14:53.578Z",
+  "coveredFrom": "2026-03-10T15:14:53.575Z",
+  "coveredTo": "2026-03-11T15:14:53.575Z",
+  "query": {
+    "source": "sample",
+    "projectId": "sample-project",
+    "serviceName": "mcp-agent8",
+    "location": "asia-northeast3",
+    "from": "2026-03-10T15:14:53.575Z",
+    "to": "2026-03-11T15:14:53.575Z",
+    "limit": 1000,
+    "toolFlows": [
+      "image_asset_generate",
+      "image_variation_generate",
+      "spritesheet_generate",
+      "spritesheet_variation_generate"
+    ]
+  },
+  "summary": {
+    "totalRuns": 4,
+    "completedRuns": 3,
+    "failedRuns": 1,
+    "handedOffRuns": 0,
+    "queueTimeouts": 1,
+    "incidentsBySeverity": {
+      "info": 0,
+      "warning": 1,
+      "critical": 1
+    },
+    "runsByFlow": {
+      "spritesheet_generate": 1,
+      "image_asset_generate": 1,
+      "image_variation_generate": 1,
+      "spritesheet_variation_generate": 1
+    }
+  },
+  "runs": [
+    {
+      "runId": "sprite-op-001",
+      "projectId": "sample-project",
+      "location": "asia-northeast3",
+      "serviceName": "mcp-agent8",
+      "revisionName": "mcp-agent8-00012-sample",
+      "toolFlow": "spritesheet_generate",
+      "operationId": "sprite-op-001",
+      "startedAt": "2026-03-11T09:00:00.000Z",
+      "endedAt": "2026-03-11T09:00:28.950Z",
+      "status": "completed",
+      "providerChain": [
+        "google"
+      ],
+      "primaryProvider": "google",
+      "fallbackUsed": false,
+      "stages": [
+        {
+          "stage": "request",
+          "startedAt": "2026-03-11T09:00:00.000Z",
+          "endedAt": "2026-03-11T09:00:00.000Z",
+          "durationMs": 1000,
+          "sourceEventIds": [
+            "event-sample-1"
+          ]
+        },
+        {
+          "stage": "provider_request",
+          "startedAt": "2026-03-11T09:00:01.000Z",
+          "endedAt": "2026-03-11T09:00:19.800Z",
+          "durationMs": 19800,
+          "sourceEventIds": [
+            "event-sample-2",
+            "event-sample-3"
+          ]
+        },
+        {
+          "stage": "analysis",
+          "startedAt": "2026-03-11T09:00:26.700Z",
+          "endedAt": "2026-03-11T09:00:26.700Z",
+          "durationMs": 6900,
+          "sourceEventIds": [
+            "event-sample-4"
+          ]
+        },
+        {
+          "stage": "background_removal",
+          "startedAt": "2026-03-11T09:00:26.950Z",
+          "endedAt": "2026-03-11T09:00:26.950Z",
+          "durationMs": 120,
+          "sourceEventIds": [
+            "event-sample-5"
+          ]
+        },
+        {
+          "stage": "upload",
+          "startedAt": "2026-03-11T09:00:28.900Z",
+          "endedAt": "2026-03-11T09:00:28.900Z",
+          "durationMs": 2000,
+          "sourceEventIds": [
+            "event-sample-6"
+          ]
+        },
+        {
+          "stage": "completed",
+          "startedAt": "2026-03-11T09:00:28.950Z",
+          "endedAt": "2026-03-11T09:00:28.950Z",
+          "durationMs": 0,
+          "sourceEventIds": [
+            "event-sample-7"
+          ]
+        }
+      ],
+      "totalDurationMs": 28900,
+      "evidenceEventIds": [
+        "event-sample-1",
+        "event-sample-2",
+        "event-sample-3",
+        "event-sample-4",
+        "event-sample-5",
+        "event-sample-6",
+        "event-sample-7"
+      ],
+      "bottleneckStage": "provider_request",
+      "bottleneckDurationMs": 19800
+    },
+    {
+      "runId": "image-op-002",
+      "projectId": "sample-project",
+      "location": "asia-northeast3",
+      "serviceName": "mcp-agent8",
+      "revisionName": "mcp-agent8-00012-sample",
+      "toolFlow": "image_asset_generate",
+      "operationId": "image-op-002",
+      "requestId": "fal-req-002",
+      "startedAt": "2026-03-11T10:15:00.000Z",
+      "endedAt": "2026-03-11T10:15:20.400Z",
+      "status": "failed",
+      "providerChain": [
+        "google",
+        "fal"
+      ],
+      "primaryProvider": "google",
+      "fallbackUsed": true,
+      "stages": [
+        {
+          "stage": "request",
+          "startedAt": "2026-03-11T10:15:00.000Z",
+          "endedAt": "2026-03-11T10:15:00.000Z",
+          "durationMs": 2500,
+          "sourceEventIds": [
+            "event-sample-8"
+          ]
+        },
+        {
+          "stage": "provider_request",
+          "startedAt": "2026-03-11T10:15:02.500Z",
+          "endedAt": "2026-03-11T10:15:02.700Z",
+          "durationMs": 700,
+          "sourceEventIds": [
+            "event-sample-9",
+            "event-sample-10"
+          ]
+        },
+        {
+          "stage": "queue_submit",
+          "startedAt": "2026-03-11T10:15:03.200Z",
+          "endedAt": "2026-03-11T10:15:03.200Z",
+          "durationMs": 500,
+          "sourceEventIds": [
+            "event-sample-11"
+          ]
+        },
+        {
+          "stage": "queue_wait",
+          "startedAt": "2026-03-11T10:15:20.400Z",
+          "endedAt": "2026-03-11T10:15:20.400Z",
+          "durationMs": 17200,
+          "sourceEventIds": [
+            "event-sample-12"
+          ]
+        }
+      ],
+      "totalDurationMs": 20400,
+      "evidenceEventIds": [
+        "event-sample-8",
+        "event-sample-9",
+        "event-sample-10",
+        "event-sample-11",
+        "event-sample-12"
+      ],
+      "bottleneckStage": "queue_wait",
+      "bottleneckDurationMs": 17200,
+      "timeoutKind": "fal_in_queue_timeout",
+      "failureKind": "queue_backlog"
+    },
+    {
+      "runId": "variation-op-003",
+      "projectId": "sample-project",
+      "location": "asia-northeast3",
+      "serviceName": "mcp-agent8",
+      "revisionName": "mcp-agent8-00012-sample",
+      "toolFlow": "image_variation_generate",
+      "operationId": "variation-op-003",
+      "requestId": "fal-req-003",
+      "startedAt": "2026-03-11T11:30:00.000Z",
+      "endedAt": "2026-03-11T11:32:07.100Z",
+      "status": "completed",
+      "providerChain": [
+        "google",
+        "fal"
+      ],
+      "primaryProvider": "google",
+      "fallbackUsed": true,
+      "stages": [
+        {
+          "stage": "request",
+          "startedAt": "2026-03-11T11:30:00.000Z",
+          "endedAt": "2026-03-11T11:30:00.000Z",
+          "durationMs": 2900,
+          "sourceEventIds": [
+            "event-sample-13"
+          ]
+        },
+        {
+          "stage": "provider_request",
+          "startedAt": "2026-03-11T11:30:02.900Z",
+          "endedAt": "2026-03-11T11:30:03.100Z",
+          "durationMs": 600,
+          "sourceEventIds": [
+            "event-sample-14",
+            "event-sample-15"
+          ]
+        },
+        {
+          "stage": "queue_submit",
+          "startedAt": "2026-03-11T11:30:03.500Z",
+          "endedAt": "2026-03-11T11:30:03.500Z",
+          "durationMs": 700,
+          "sourceEventIds": [
+            "event-sample-16"
+          ]
+        },
+        {
+          "stage": "queue_wait",
+          "startedAt": "2026-03-11T11:31:03.800Z",
+          "endedAt": "2026-03-11T11:31:03.800Z",
+          "durationMs": 60300,
+          "sourceEventIds": [
+            "event-sample-17"
+          ]
+        },
+        {
+          "stage": "status_poll",
+          "startedAt": "2026-03-11T11:32:05.000Z",
+          "endedAt": "2026-03-11T11:32:06.200Z",
+          "durationMs": 1200,
+          "sourceEventIds": [
+            "event-sample-18",
+            "event-sample-19"
+          ]
+        },
+        {
+          "stage": "result_fetch",
+          "startedAt": "2026-03-11T11:32:06.500Z",
+          "endedAt": "2026-03-11T11:32:06.500Z",
+          "durationMs": 600,
+          "sourceEventIds": [
+            "event-sample-20"
+          ]
+        },
+        {
+          "stage": "completed",
+          "startedAt": "2026-03-11T11:32:07.100Z",
+          "endedAt": "2026-03-11T11:32:07.100Z",
+          "durationMs": 600,
+          "sourceEventIds": [
+            "event-sample-21"
+          ]
+        }
+      ],
+      "totalDurationMs": 67100,
+      "evidenceEventIds": [
+        "event-sample-13",
+        "event-sample-14",
+        "event-sample-15",
+        "event-sample-16",
+        "event-sample-17",
+        "event-sample-18",
+        "event-sample-19",
+        "event-sample-20",
+        "event-sample-21"
+      ],
+      "bottleneckStage": "queue_wait",
+      "bottleneckDurationMs": 60300,
+      "failureKind": "primary_provider_failure"
+    },
+    {
+      "runId": "sprite-var-op-004",
+      "projectId": "sample-project",
+      "location": "asia-northeast3",
+      "serviceName": "mcp-agent8",
+      "revisionName": "mcp-agent8-00012-sample",
+      "toolFlow": "spritesheet_variation_generate",
+      "operationId": "sprite-var-op-004",
+      "startedAt": "2026-03-11T12:45:00.000Z",
+      "endedAt": "2026-03-11T12:45:23.150Z",
+      "status": "completed",
+      "providerChain": [
+        "google"
+      ],
+      "primaryProvider": "google",
+      "fallbackUsed": false,
+      "stages": [
+        {
+          "stage": "request",
+          "startedAt": "2026-03-11T12:45:00.000Z",
+          "endedAt": "2026-03-11T12:45:00.000Z",
+          "durationMs": 300,
+          "sourceEventIds": [
+            "event-sample-22"
+          ]
+        },
+        {
+          "stage": "provider_request",
+          "startedAt": "2026-03-11T12:45:00.300Z",
+          "endedAt": "2026-03-11T12:45:21.000Z",
+          "durationMs": 20700,
+          "sourceEventIds": [
+            "event-sample-23",
+            "event-sample-24"
+          ]
+        },
+        {
+          "stage": "background_removal",
+          "startedAt": "2026-03-11T12:45:21.150Z",
+          "endedAt": "2026-03-11T12:45:21.150Z",
+          "durationMs": 150,
+          "sourceEventIds": [
+            "event-sample-25"
+          ]
+        },
+        {
+          "stage": "upload",
+          "startedAt": "2026-03-11T12:45:23.100Z",
+          "endedAt": "2026-03-11T12:45:23.100Z",
+          "durationMs": 1900,
+          "sourceEventIds": [
+            "event-sample-26"
+          ]
+        },
+        {
+          "stage": "completed",
+          "startedAt": "2026-03-11T12:45:23.150Z",
+          "endedAt": "2026-03-11T12:45:23.150Z",
+          "durationMs": 0,
+          "sourceEventIds": [
+            "event-sample-27"
+          ]
+        }
+      ],
+      "totalDurationMs": 23150,
+      "evidenceEventIds": [
+        "event-sample-22",
+        "event-sample-23",
+        "event-sample-24",
+        "event-sample-25",
+        "event-sample-26",
+        "event-sample-27"
+      ],
+      "bottleneckStage": "provider_request",
+      "bottleneckDurationMs": 20700
+    }
+  ],
+  "incidents": [
+    {
+      "incidentId": "image-op-002:critical:fal-queue-backlog-detected",
+      "runId": "image-op-002",
+      "detectedAt": "2026-03-11T10:15:20.400Z",
+      "severity": "critical",
+      "summary": "fal queue backlog detected",
+      "explanation": "The run stayed in IN_QUEUE long enough to match the current queue backlog timeout rule.",
+      "evidenceEventIds": [
+        "event-sample-8",
+        "event-sample-9",
+        "event-sample-10",
+        "event-sample-11",
+        "event-sample-12"
+      ],
+      "timeoutKind": "fal_in_queue_timeout",
+      "failureKind": "queue_backlog",
+      "recommendedAction": "Inspect fal queue health, fallback demand, and recent deployment changes."
+    },
+    {
+      "incidentId": "variation-op-003:warning:primary-provider-failed-before-fallback",
+      "runId": "variation-op-003",
+      "detectedAt": "2026-03-11T11:32:07.100Z",
+      "severity": "warning",
+      "summary": "primary provider failed before fallback",
+      "explanation": "The primary model failed and the run moved to a fallback path.",
+      "evidenceEventIds": [
+        "event-sample-13",
+        "event-sample-14",
+        "event-sample-15",
+        "event-sample-16",
+        "event-sample-17",
+        "event-sample-18",
+        "event-sample-19",
+        "event-sample-20",
+        "event-sample-21"
+      ],
+      "failureKind": "primary_provider_failure",
+      "recommendedAction": "Compare primary provider stability against fallback success by revision."
+    }
+  ]
+}

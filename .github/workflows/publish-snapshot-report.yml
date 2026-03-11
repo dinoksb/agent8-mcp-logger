@@ -1,0 +1,113 @@
+name: Publish Snapshot Report
+
+on:
+  workflow_dispatch:
+    inputs:
+      snapshot_source:
+        description: Snapshot source
+        required: false
+        default: sample
+        type: choice
+        options:
+          - sample
+          - gcp
+      snapshot_from:
+        description: Optional ISO8601 start timestamp
+        required: false
+        type: string
+      snapshot_to:
+        description: Optional ISO8601 end timestamp
+        required: false
+        type: string
+      snapshot_limit:
+        description: Optional entry limit
+        required: false
+        type: string
+  schedule:
+    - cron: "0 */6 * * *"
+
+permissions:
+  contents: read
+  id-token: write
+  pages: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      SNAPSHOT_SOURCE: ${{ github.event.inputs.snapshot_source || vars.SNAPSHOT_SOURCE || 'sample' }}
+      SNAPSHOT_PROJECT_ID: ${{ vars.SNAPSHOT_PROJECT_ID || 'agent8-image-mcp-server' }}
+      SNAPSHOT_SERVICE_NAME: ${{ vars.SNAPSHOT_SERVICE_NAME }}
+      SNAPSHOT_LOCATION: ${{ vars.SNAPSHOT_LOCATION }}
+      SNAPSHOT_FROM: ${{ github.event.inputs.snapshot_from || vars.SNAPSHOT_FROM }}
+      SNAPSHOT_TO: ${{ github.event.inputs.snapshot_to || vars.SNAPSHOT_TO }}
+      SNAPSHOT_LIMIT: ${{ github.event.inputs.snapshot_limit || vars.SNAPSHOT_LIMIT || '1000' }}
+      SNAPSHOT_TOOL_FLOWS: ${{ vars.SNAPSHOT_TOOL_FLOWS }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Authenticate to Google Cloud with Workload Identity Federation
+        if: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && vars.GCP_SERVICE_ACCOUNT != '' }}
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ vars.SNAPSHOT_PROJECT_ID || 'agent8-image-mcp-server' }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+          export_environment_variables: true
+
+      - name: Authenticate to Google Cloud with service account key fallback
+        if: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER == '' && secrets.GCP_SERVICE_ACCOUNT_KEY != '' }}
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ vars.SNAPSHOT_PROJECT_ID || 'agent8-image-mcp-server' }}
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+          create_credentials_file: true
+          export_environment_variables: true
+
+      - name: Validate snapshot configuration
+        run: |
+          if [ "${SNAPSHOT_SOURCE}" = "gcp" ]; then
+            test -n "${SNAPSHOT_PROJECT_ID}" || { echo "SNAPSHOT_PROJECT_ID is required for gcp snapshots."; exit 1; }
+            test -n "${SNAPSHOT_SERVICE_NAME}" || { echo "SNAPSHOT_SERVICE_NAME is required for gcp snapshots."; exit 1; }
+            if [ -z "${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}" ] && [ -z "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" ]; then
+              echo "GCP auth is not configured. Set WIF vars or GCP_SERVICE_ACCOUNT_KEY."
+              exit 1
+            fi
+          fi
+
+      - name: Install dependencies
+        run: npm ci --no-fund --no-audit
+
+      - name: Build snapshot report
+        run: npm run snapshot:build
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
