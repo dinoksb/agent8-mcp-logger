@@ -726,8 +726,12 @@
                     <strong>${run.bottleneckStage ? `${labelCase(run.bottleneckStage)} (${fmtMs(run.bottleneckDurationMs)})` : "-"}</strong>
                   </div>
                   <div>
-                    <span class="subtle">Operation / Request</span>
-                    <strong><code>${escapeHtml(run.operationId ?? "-")}</code>${run.requestId ? `<br /><code>${escapeHtml(run.requestId)}</code>` : ""}</strong>
+                    <span class="subtle">Operation ID</span>
+                    <strong><code>${escapeHtml(run.operationId ?? "-")}</code></strong>
+                  </div>
+                  <div>
+                    <span class="subtle">fal.ai request_id</span>
+                    <strong>${run.requestId ? `<code>${escapeHtml(run.requestId)}</code>` : "-"}</strong>
                   </div>
                   <div>
                     <span class="subtle">Failure / Timeout</span>
