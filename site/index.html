@@ -143,6 +143,13 @@
         background: var(--surface-strong);
       }
 
+      .incident-link {
+        display: block;
+        color: inherit;
+        text-decoration: none;
+        cursor: pointer;
+      }
+
       .incident[data-severity="critical"] {
         border-color: rgba(180, 35, 24, 0.3);
       }
@@ -156,6 +163,7 @@
         border-radius: 18px;
         border: 1px solid var(--line);
         background: var(--surface-strong);
+        scroll-margin-top: 24px;
       }
 
       .run-head {
@@ -269,6 +277,90 @@
         border-radius: 14px;
         border: 1px solid var(--line);
         background: rgba(255, 255, 255, 0.55);
+      }
+
+      .event-list {
+        display: grid;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .event-card {
+        margin-top: 0;
+        padding: 12px 14px;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.72);
+      }
+
+      .event-summary {
+        display: grid;
+        gap: 8px;
+      }
+
+      .event-summary-meta {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+
+      .event-summary-message {
+        font-weight: 700;
+        line-height: 1.45;
+        word-break: break-word;
+      }
+
+      .event-body {
+        display: grid;
+        gap: 12px;
+        margin-top: 12px;
+      }
+
+      .field-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 10px;
+      }
+
+      .field {
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.78);
+      }
+
+      .field strong {
+        display: block;
+        margin-top: 6px;
+        word-break: break-word;
+      }
+
+      .compact {
+        padding: 12px 14px;
+      }
+
+      .error-card {
+        border-color: rgba(180, 35, 24, 0.22);
+      }
+
+      .metadata-block {
+        margin: 10px 0 0;
+        padding: 12px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.85);
+        color: var(--ink);
+        font-family: "Cascadia Code", "Consolas", monospace;
+        font-size: 12px;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        word-break: break-word;
+        overflow: auto;
+      }
+
+      .nested-details {
+        margin-top: 10px;
       }
 
       .links {
@@ -556,6 +648,246 @@
         return `https://console.cloud.google.com/logs/query;query=${encodeURIComponent(filters.join("\n"))}?project=${encodeURIComponent(projectId)}`;
       }
 
+      function hasValue(value) {
+        return value !== undefined && value !== null && value !== "";
+      }
+
+      function toRunAnchorId(runId) {
+        return `run-${String(runId ?? "")
+          .toLowerCase()
+          .replaceAll(/[^a-z0-9]+/g, "-")
+          .replaceAll(/^-+|-+$/g, "")}`;
+      }
+
+      function translateSeverity(value) {
+        const lower = String(value ?? "").toLowerCase();
+        if (lower === "warning") {
+          return "경고";
+        }
+
+        if (lower === "critical") {
+          return "치명";
+        }
+
+        if (lower === "info") {
+          return "정보";
+        }
+
+        return value;
+      }
+
+      function translateIncidentSummary(value) {
+        const summaryMap = {
+          "provider request is slower than baseline": "프로바이더 요청이 기준보다 느립니다",
+          "primary provider failed before fallback": "기본 프로바이더가 실패해 폴백으로 전환되었습니다",
+          "fal queue backlog detected": "fal 큐 적체가 감지되었습니다",
+          "spritesheet analysis is slower than baseline": "스프라이트시트 분석이 기준보다 느립니다",
+          "upload stage is slower than baseline": "업로드 단계가 기준보다 느립니다",
+          "reference fetch is slower than baseline": "레퍼런스 이미지 가져오기가 기준보다 느립니다",
+        };
+
+        return summaryMap[value] ?? value;
+      }
+
+      function translateIncidentExplanation(value) {
+        const explanationMap = {
+          "The provider generation stage exceeded the configured threshold and dominated the run duration.":
+            "프로바이더 생성 단계가 설정된 임계값을 넘겼고, 전체 실행 시간의 대부분을 차지했습니다.",
+          "The primary model failed and the run moved to a fallback path.":
+            "기본 모델이 실패해 이 실행은 폴백 경로로 전환되었습니다.",
+          "The run stayed in IN_QUEUE long enough to match the current queue backlog timeout rule.":
+            "이 실행은 IN_QUEUE 상태에 오래 머물러 현재 큐 적체 타임아웃 규칙에 해당합니다.",
+          "The spritesheet analysis stage exceeded the configured threshold and dominated the run duration.":
+            "스프라이트시트 분석 단계가 설정된 임계값을 넘겼고, 전체 실행 시간의 대부분을 차지했습니다.",
+          "The upload stage exceeded the configured threshold and dominated the run duration.":
+            "업로드 단계가 설정된 임계값을 넘겼고, 전체 실행 시간의 대부분을 차지했습니다.",
+          "The reference fetch stage exceeded the configured threshold and dominated the run duration.":
+            "레퍼런스 이미지 가져오기 단계가 설정된 임계값을 넘겼고, 전체 실행 시간의 대부분을 차지했습니다.",
+        };
+
+        return explanationMap[value] ?? value;
+      }
+
+      function severityTone(value) {
+        const lower = String(value ?? "").toLowerCase();
+        if (lower === "warning") {
+          return "warning";
+        }
+
+        if (["error", "critical", "alert", "emergency"].includes(lower)) {
+          return "critical";
+        }
+
+        return "";
+      }
+
+      function renderValue(value, options = {}) {
+        const escaped = escapeHtml(String(value));
+
+        if (options.link && isHttpUrl(value)) {
+          return `<a class="result-link" href="${escaped}" target="_blank" rel="noreferrer">${escaped}</a>`;
+        }
+
+        if (options.code) {
+          return `<code>${escaped}</code>`;
+        }
+
+        return escaped;
+      }
+
+      function renderField(label, value, options = {}) {
+        if (!hasValue(value)) {
+          return "";
+        }
+
+        return `
+          <div class="field">
+            <span class="subtle">${escapeHtml(label)}</span>
+            <strong>${renderValue(value, options)}</strong>
+          </div>
+        `;
+      }
+
+      function renderEventMetadata(event) {
+        if (!event?.metadata || !Object.keys(event.metadata).length) {
+          return "";
+        }
+
+        return `
+          <details class="nested-details">
+            <summary>Metadata (${Object.keys(event.metadata).length})</summary>
+            <pre class="metadata-block">${escapeHtml(JSON.stringify(event.metadata, null, 2))}</pre>
+          </details>
+        `;
+      }
+
+      function renderEvidenceEvent(event) {
+        const stageTone =
+          event.stage === "failed"
+            ? "critical"
+            : event.stage === "queue_wait" || event.stage === "status_poll"
+              ? "warning"
+              : "";
+        const imageSize =
+          hasValue(event.width) || hasValue(event.height)
+            ? `${hasValue(event.width) ? event.width : "?"} x ${hasValue(event.height) ? event.height : "?"}`
+            : null;
+        const spriteGrid =
+          hasValue(event.rows) || hasValue(event.cols)
+            ? `${hasValue(event.rows) ? event.rows : "?"} x ${hasValue(event.cols) ? event.cols : "?"}`
+            : null;
+
+        return `
+          <details class="event-card">
+            <summary>
+              <div class="event-summary">
+                <div class="event-summary-meta">
+                  <span class="pill ${stageTone}">${labelCase(event.stage)}</span>
+                  <span class="pill ${severityTone(event.severity)}">${escapeHtml(String(event.severity).toLowerCase())}</span>
+                  <span class="subtle">${fmt(event.timestamp)}</span>
+                </div>
+                <div class="event-summary-message">${escapeHtml(event.message)}</div>
+              </div>
+            </summary>
+            <div class="event-body">
+              <div class="field-grid">
+                ${renderField("Event ID", event.eventId, { code: true })}
+                ${renderField("Raw entry ID", event.rawEntryId, { code: true })}
+                ${renderField("Insert ID", event.insertId, { code: true })}
+                ${renderField("Tool flow", labelCase(event.toolFlow))}
+                ${renderField("Stage", labelCase(event.stage))}
+                ${renderField("Phase", event.phase)}
+                ${renderField("Provider", event.provider)}
+                ${renderField("Model", event.model)}
+                ${renderField("Operation ID", event.operationId, { code: true })}
+                ${renderField("Request ID", event.requestId, { code: true })}
+                ${renderField("Trace", event.trace, { code: true })}
+                ${renderField("Span ID", event.spanId, { code: true })}
+                ${renderField("Status", event.status)}
+                ${renderField("Duration", fmtMs(event.durationMs))}
+                ${renderField("Total duration", fmtMs(event.totalDurationMs))}
+                ${renderField("Queue position", event.queuePosition)}
+                ${renderField("Queued", String(event.queued))}
+                ${renderField("Reference type", event.referenceType)}
+                ${renderField("Fallback from", event.fallbackFromModel)}
+                ${renderField("Asset type", event.assetType)}
+                ${renderField("Style", event.style)}
+                ${renderField("Image size", imageSize)}
+                ${renderField("Sprite grid", spriteGrid)}
+                ${renderField("Image count", event.numImages)}
+                ${renderField("Result URL", event.url, { link: true })}
+              </div>
+              ${
+                hasValue(event.prompt)
+                  ? `
+                    <div class="info-card compact">
+                      <span class="subtle">Prompt</span>
+                      <p class="prompt-text">${escapeHtml(event.prompt)}</p>
+                    </div>
+                  `
+                  : ""
+              }
+              ${
+                hasValue(event.errorMessage)
+                  ? `
+                    <div class="info-card compact error-card">
+                      <span class="subtle">Error message</span>
+                      <p class="prompt-text">${escapeHtml(event.errorMessage)}</p>
+                    </div>
+                  `
+                  : ""
+              }
+              ${renderEventMetadata(event)}
+            </div>
+          </details>
+        `;
+      }
+
+      function renderEvidenceList(events, emptyMessage) {
+        if (!Array.isArray(events) || !events.length) {
+          return `<div class="empty">${escapeHtml(emptyMessage)}</div>`;
+        }
+
+        return `
+          <div class="event-list">
+            ${events.map((event) => renderEvidenceEvent(event)).join("")}
+          </div>
+        `;
+      }
+
+      function renderStageEvidence(stage, evidenceEvents) {
+        const sourceEventIds = new Set(stage.sourceEventIds ?? []);
+        const stageEvents = Array.isArray(evidenceEvents)
+          ? evidenceEvents.filter((event) => sourceEventIds.has(event.eventId))
+          : [];
+
+        return `
+          <div class="subtle">
+            Start: ${stage.startedAt ? fmt(stage.startedAt) : "-"}<br />
+            End: ${stage.endedAt ? fmt(stage.endedAt) : "-"}<br />
+            Evidence events: ${stage.sourceEventIds.length}
+          </div>
+          <details class="nested-details">
+            <summary>Show evidence events (${stageEvents.length})</summary>
+            ${renderEvidenceList(stageEvents, "No stage-level evidence event details were included.")}
+          </details>
+        `;
+      }
+
+      function renderRunEvidence(run) {
+        const evidenceEvents = Array.isArray(run.evidenceEvents) ? run.evidenceEvents : [];
+
+        return `
+          <details>
+            <summary>Evidence timeline (${evidenceEvents.length})</summary>
+            ${renderEvidenceList(
+              evidenceEvents,
+              "No evidence event details were included in this snapshot.",
+            )}
+          </details>
+        `;
+      }
+
       function renderSummary(report) {
         const cards = [
           ["Total runs", report.summary.totalRuns],
@@ -670,12 +1002,16 @@
         incidentsNode.innerHTML = report.incidents
           .map(
             (incident) => `
-              <article class="incident" data-severity="${incident.severity}">
-                <div class="pill ${incident.severity}">${incident.severity}</div>
-                <h3>${escapeHtml(incident.summary)}</h3>
-                <p class="subtle">${escapeHtml(incident.explanation)}</p>
-                <p class="subtle"><strong>Run:</strong> <code>${escapeHtml(incident.runId)}</code></p>
-              </article>
+              <a
+                class="incident incident-link"
+                data-severity="${incident.severity}"
+                href="#${escapeHtml(toRunAnchorId(incident.runId))}"
+              >
+                <div class="pill ${incident.severity}">${escapeHtml(translateSeverity(incident.severity))}</div>
+                <h3>${escapeHtml(translateIncidentSummary(incident.summary))}</h3>
+                <p class="subtle">${escapeHtml(translateIncidentExplanation(incident.explanation))}</p>
+                <p class="subtle"><strong>대상 Run:</strong> <code>${escapeHtml(incident.runId)}</code></p>
+              </a>
             `,
           )
           .join("");
@@ -702,7 +1038,7 @@
             const logsExplorerUrl = buildLogsExplorerUrl(run, report);
 
             return `
-              <article class="run-card">
+              <article class="run-card" id="${escapeHtml(toRunAnchorId(run.runId))}">
                 <div class="run-head">
                   <div>
                     <div class="pill ${run.status === "failed" ? "critical" : run.status === "handed_off" ? "warning" : ""}">${labelCase(run.status)}</div>
@@ -796,6 +1132,8 @@
                   : ""
                 }
 
+                ${renderRunEvidence(run)}
+
                 <details>
                   <summary>Stages (${run.stages.length})</summary>
                   <div class="stage-list">
@@ -805,11 +1143,7 @@
                           <div class="stage-card">
                             <span class="subtle">${labelCase(stage.stage)}</span>
                             <strong>${fmtMs(stage.durationMs)}</strong>
-                            <div class="subtle">
-                              Start: ${stage.startedAt ? fmt(stage.startedAt) : "-"}<br />
-                              End: ${stage.endedAt ? fmt(stage.endedAt) : "-"}<br />
-                              Evidence events: ${stage.sourceEventIds.length}
-                            </div>
+                            ${renderStageEvidence(stage, run.evidenceEvents)}
                           </div>
                         `,
                       )
