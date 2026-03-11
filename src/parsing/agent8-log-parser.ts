@@ -30,19 +30,19 @@ const prefixedToolFlows: Array<{
   toolFlow: ToolFlowName;
 }> = [
   {
-    pattern: /^\[ImageGeneration\]\s*/i,
+    pattern: /\[ImageGeneration\]\s*/i,
     toolFlow: "image_asset_generate",
   },
   {
-    pattern: /^\[ImageVariation\]\s*/i,
+    pattern: /\[ImageVariation\]\s*/i,
     toolFlow: "image_variation_generate",
   },
   {
-    pattern: /^\[SpritesheetGeneration\]\s*/i,
+    pattern: /\[SpritesheetGeneration\]\s*/i,
     toolFlow: "spritesheet_generate",
   },
   {
-    pattern: /^\[SpritesheetVariation\]\s*/i,
+    pattern: /\[SpritesheetVariation\]\s*/i,
     toolFlow: "spritesheet_variation_generate",
   },
 ];
@@ -86,10 +86,179 @@ function deriveToolFlowFromPrefix(message: string): ToolFlowName | undefined {
     ?.toolFlow;
 }
 
+function stripLoggerEnvelope(message: string): string {
+  return message.replace(/^\[[^\]]+\]\s+\[[A-Z]+\]\s+/, "").trim();
+}
+
+function splitTopLevelCommaSeparated(input: string): string[] {
+  const parts: string[] = [];
+  let current = "";
+  let singleQuoted = false;
+  let doubleQuoted = false;
+  let escapeNext = false;
+  let depth = 0;
+
+  for (const char of input) {
+    if (escapeNext) {
+      current += char;
+      escapeNext = false;
+      continue;
+    }
+
+    if (char === "\\") {
+      current += char;
+      escapeNext = true;
+      continue;
+    }
+
+    if (char === "'" && !doubleQuoted) {
+      singleQuoted = !singleQuoted;
+      current += char;
+      continue;
+    }
+
+    if (char === '"' && !singleQuoted) {
+      doubleQuoted = !doubleQuoted;
+      current += char;
+      continue;
+    }
+
+    if (!singleQuoted && !doubleQuoted) {
+      if (char === "{" || char === "[") {
+        depth += 1;
+      } else if ((char === "}" || char === "]") && depth > 0) {
+        depth -= 1;
+      } else if (char === "," && depth === 0) {
+        const trimmed = current.trim();
+        if (trimmed) {
+          parts.push(trimmed);
+        }
+        current = "";
+        continue;
+      }
+    }
+
+    current += char;
+  }
+
+  const trimmed = current.trim();
+  if (trimmed) {
+    parts.push(trimmed);
+  }
+
+  return parts;
+}
+
+function parseLooseScalar(rawValue: string): unknown {
+  const value = rawValue.trim();
+
+  if (value === "true") {
+    return true;
+  }
+  if (value === "false") {
+    return false;
+  }
+  if (value === "null") {
+    return null;
+  }
+  if (value === "undefined") {
+    return undefined;
+  }
+  if (/^-?\d+(\.\d+)?$/.test(value)) {
+    return Number(value);
+  }
+  if (value.startsWith('"') && value.endsWith('"')) {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return value.slice(1, -1);
+    }
+  }
+  if (value.startsWith("'") && value.endsWith("'")) {
+    return value.slice(1, -1).replace(/\\'/g, "'");
+  }
+  if (
+    (value.startsWith("{") && value.endsWith("}")) ||
+    (value.startsWith("[") && value.endsWith("]"))
+  ) {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return value;
+    }
+  }
+
+  return value;
+}
+
+function parseLooseObjectLiteral(rawObject: string): Record<string, unknown> | undefined {
+  const trimmed = rawObject.trim();
+  if (!trimmed.startsWith("{") || !trimmed.endsWith("}")) {
+    return undefined;
+  }
+
+  const inner = trimmed.slice(1, -1).trim();
+  if (!inner) {
+    return {};
+  }
+
+  const pairs = splitTopLevelCommaSeparated(inner.replace(/\r?\n/g, ","));
+  const parsed: Record<string, unknown> = {};
+
+  for (const pair of pairs) {
+    const match = pair.match(/^([A-Za-z0-9_.$-]+)\s*:\s*(.+)$/s);
+    if (!match) {
+      return undefined;
+    }
+
+    parsed[match[1]] = parseLooseScalar(match[2]);
+  }
+
+  return parsed;
+}
+
+function parseTextPayload(textPayload: string): {
+  message: string;
+  metadata: Record<string, unknown>;
+} {
+  const stripped = stripLoggerEnvelope(textPayload);
+  const braceIndex = stripped.indexOf("{");
+
+  if (braceIndex === -1) {
+    return { message: stripped, metadata: {} };
+  }
+
+  const message = stripped.slice(0, braceIndex).trim();
+  const rawMetadata = stripped.slice(braceIndex).trim();
+
+  if (!rawMetadata) {
+    return { message, metadata: {} };
+  }
+
+  try {
+    const parsed = JSON.parse(rawMetadata);
+    return {
+      message,
+      metadata: isRecord(parsed) ? parsed : {},
+    };
+  } catch {
+    const parsed = parseLooseObjectLiteral(rawMetadata);
+    return {
+      message,
+      metadata: parsed ?? {},
+    };
+  }
+}
+
 function deriveMessage(entry: RawLogEntryRecord): string {
   const payload = entry.jsonPayload ?? {};
+  const parsedTextPayload = entry.textPayload
+    ? parseTextPayload(entry.textPayload)
+    : undefined;
+
   return (
     asString(payload.message) ??
+    parsedTextPayload?.message ??
     entry.textPayload ??
     asString(payload.event) ??
     "Unknown log message"
@@ -197,7 +366,13 @@ function deriveProvider(
 }
 
 export function parseLogEntry(entry: RawLogEntryRecord): ParsedLogEvent {
-  const payload = isRecord(entry.jsonPayload) ? entry.jsonPayload : {};
+  const textPayload = entry.textPayload
+    ? parseTextPayload(entry.textPayload)
+    : undefined;
+  const payload = {
+    ...(isRecord(entry.jsonPayload) ? entry.jsonPayload : {}),
+    ...(textPayload?.metadata ?? {}),
+  };
   const message = deriveMessage(entry);
   const toolFlow = deriveToolFlow(message, payload);
   const stage = deriveStage(message, payload, toolFlow);
@@ -264,13 +439,5 @@ export function parseLogEntries(entries: RawLogEntryRecord[]): ParsedLogEvent[] 
 }
 
 export function isRelevantAssetGenerationEvent(event: ParsedLogEvent): boolean {
-  return Boolean(
-    deriveToolFlowFromPrefix(event.message) ||
-      [
-        "image_asset_generate",
-        "image_variation_generate",
-        "spritesheet_generate",
-        "spritesheet_variation_generate",
-      ].includes(String(event.metadata.toolFlow ?? event.metadata.tool_flow ?? event.metadata.flow ?? "")),
-  );
+  return event.toolFlow !== "unknown";
 }
