@@ -264,8 +264,8 @@ function extractLooseFieldValue(
 
   const escapedKey = escapeRegExp(key);
   const patterns = [
-    new RegExp(`["']?${escapedKey}["']?\\s*:\\s*"((?:\\\\"|[^"])*)"`, "m"),
-    new RegExp(`["']?${escapedKey}["']?\\s*:\\s*'((?:\\\\'|[^'])*)'`, "m"),
+    new RegExp(`["']?${escapedKey}["']?\\s*:\\s*"([\\s\\S]*?)"(?=\\s*,|\\s*}|\\s*$)`, "m"),
+    new RegExp(`["']?${escapedKey}["']?\\s*:\\s*'([\\s\\S]*?)'(?=\\s*,|\\s*}|\\s*$)`, "m"),
     new RegExp(`["']?${escapedKey}["']?\\s*:\\s*(-?\\d+(?:\\.\\d+)?)`, "m"),
     new RegExp(`["']?${escapedKey}["']?\\s*:\\s*(true|false)`, "mi"),
     new RegExp(`["']?${escapedKey}["']?\\s*:\\s*null`, "mi"),
@@ -328,6 +328,7 @@ function extractLooseMetadataFields(
     "queue_position",
     "queued",
     "prompt",
+    "description",
     "referenceType",
     "reference_type",
     "fallbackFromModel",
@@ -514,7 +515,7 @@ export function parseLogEntry(entry: RawLogEntryRecord): ParsedLogEvent {
       typeof getPayloadValue(payload, "queued") === "boolean"
         ? (getPayloadValue(payload, "queued") as boolean)
         : undefined,
-    prompt: asString(getPayloadValue(payload, "prompt")),
+    prompt: asString(getPayloadValue(payload, "prompt", "description")),
     referenceType: (() => {
       const referenceType = asString(
         getPayloadValue(payload, "referenceType", "reference_type"),
