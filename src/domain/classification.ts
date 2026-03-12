@@ -76,10 +76,6 @@ export function classifyRuns(
 
     const nextRun: CorrelatedRun = {
       ...run,
-      trace: run.trace,
-      prompt: run.prompt,
-      resultUrl: run.resultUrl,
-      evidenceRawEntryIds: run.evidenceRawEntryIds,
       bottleneckStage: bottleneck.stage,
       bottleneckDurationMs: bottleneck.durationMs,
     };

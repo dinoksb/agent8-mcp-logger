@@ -4,7 +4,7 @@ import { fetchCloudLoggingEntries } from "../src/adapters/gcp-logging.js";
 import { loadSnapshotConfig } from "../src/config/env.js";
 import type { ParsedLogEvent } from "../src/domain/types.js";
 import { classifyRuns } from "../src/domain/classification.js";
-import { correlateEvents } from "../src/domain/correlation.js";
+import { correlateEventsWithStats } from "../src/domain/correlation.js";
 import {
   isRelevantAssetGenerationEvent,
   parseLogEntries,
@@ -39,7 +39,8 @@ async function main(): Promise<void> {
   );
   const recognizedEventCount = countRecognizedEvents(relevantEvents);
   const filteredOutEventCount = parsedEvents.length - relevantEvents.length;
-  const correlatedRuns = correlateEvents(relevantEvents).filter(
+  const correlation = correlateEventsWithStats(relevantEvents);
+  const correlatedRuns = correlation.runs.filter(
     (run) => run.toolFlow !== "unknown",
   );
   const classified = classifyRuns(correlatedRuns, relevantEvents);
@@ -77,6 +78,7 @@ async function main(): Promise<void> {
       recognizedEventCount,
       runCount: classified.runs.length,
       fetchStrategy: fetchResult.strategy,
+      correlationKeys: correlation.keyStats,
       notes: diagnosticsNotes,
     },
     events: relevantEvents,

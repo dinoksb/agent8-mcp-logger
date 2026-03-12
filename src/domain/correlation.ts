@@ -4,6 +4,7 @@ import type {
   RunStatus,
   StageTiming,
 } from "./types.js";
+import type { CorrelationKeyStats } from "../contracts/report-payload.js";
 
 interface CorrelationAliases {
   requestIdToOperationId: Map<string, string>;
@@ -26,18 +27,17 @@ function pickRunPrompt(events: ParsedLogEvent[]): string | undefined {
 }
 
 function pickResultUrl(events: ParsedLogEvent[]): string | undefined {
+  const reversed = [...events].reverse();
   const preferredStages = ["completed", "upload", "result_fetch", "post_processing"];
 
   for (const stage of preferredStages) {
-    const matchedEvent = [...events]
-      .reverse()
-      .find((event) => event.stage === stage && event.url);
-    if (matchedEvent?.url) {
-      return matchedEvent.url;
+    const url = reversed.find((event) => event.stage === stage && event.url)?.url;
+    if (url) {
+      return url;
     }
   }
 
-  return [...events].reverse().find((event) => event.url)?.url;
+  return reversed.find((event) => event.url)?.url;
 }
 
 function buildCorrelationAliases(events: ParsedLogEvent[]): CorrelationAliases {
@@ -184,7 +184,25 @@ function buildStageTimings(events: ParsedLogEvent[]): StageTiming[] {
     });
 }
 
+export interface CorrelationResult {
+  runs: CorrelatedRun[];
+  keyStats: CorrelationKeyStats;
+}
+
+function classifyKeyType(key: string): keyof CorrelationKeyStats {
+  if (key.startsWith("operation:")) return "operationId";
+  if (key.startsWith("request:")) return "requestId";
+  if (key.startsWith("trace:")) return "trace";
+  return "bucket";
+}
+
 export function correlateEvents(events: ParsedLogEvent[]): CorrelatedRun[] {
+  return correlateEventsWithStats(events).runs;
+}
+
+export function correlateEventsWithStats(
+  events: ParsedLogEvent[],
+): CorrelationResult {
   const grouped = new Map<string, ParsedLogEvent[]>();
   const aliases = buildCorrelationAliases(events);
 
@@ -197,7 +215,17 @@ export function correlateEvents(events: ParsedLogEvent[]): CorrelatedRun[] {
     grouped.set(key, bucket);
   }
 
-  return [...grouped.entries()]
+  const keyStats: CorrelationKeyStats = {
+    operationId: 0,
+    requestId: 0,
+    trace: 0,
+    bucket: 0,
+  };
+  for (const key of grouped.keys()) {
+    keyStats[classifyKeyType(key)] += 1;
+  }
+
+  const runs = [...grouped.entries()]
     .map(([groupKey, group]): CorrelatedRun => {
       const eventsInRun = [...group].sort((left, right) =>
         compareTimestamps(left.timestamp, right.timestamp),
@@ -266,4 +294,6 @@ export function correlateEvents(events: ParsedLogEvent[]): CorrelatedRun[] {
       };
     })
     .sort((left, right) => compareTimestamps(left.startedAt, right.startedAt));
+
+  return { runs, keyStats };
 }

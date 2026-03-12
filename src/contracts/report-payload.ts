@@ -22,12 +22,20 @@ export interface ReportSummary {
   runsByFlow: Partial<Record<ToolFlowName, number>>;
 }
 
+export interface CorrelationKeyStats {
+  operationId: number;
+  requestId: number;
+  trace: number;
+  bucket: number;
+}
+
 export interface SnapshotDiagnostics {
   fetchedEntryCount: number;
   parsedEventCount: number;
   recognizedEventCount: number;
   runCount: number;
   fetchStrategy: string;
+  correlationKeys?: CorrelationKeyStats;
   notes: string[];
 }
 
