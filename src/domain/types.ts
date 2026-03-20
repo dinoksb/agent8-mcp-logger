@@ -113,6 +113,7 @@ export interface ParsedLogEvent {
   referenceType?: "spritesheet" | "static";
   fallbackFromModel?: string;
   status?: string;
+  httpStatusCode?: number;
   url?: string;
   errorMessage?: string;
   metadata: Record<string, unknown>;

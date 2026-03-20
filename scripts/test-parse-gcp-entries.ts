@@ -258,7 +258,7 @@ for (const incident of incidents) {
 }
 
 // ── 5. Summary ──────────────────────────────────────────────────
-const summary = buildSummary(classifiedRuns, incidents);
+const summary = buildSummary(classifiedRuns, incidents, events);
 console.log(`=== 5. REPORT SUMMARY ===\n`);
 console.log(`  totalRuns:     ${summary.totalRuns}`);
 console.log(`  completed:     ${summary.completedRuns}`);

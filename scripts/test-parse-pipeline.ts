@@ -39,8 +39,21 @@ for (const event of events) {
   );
 }
 
-// ── 3. Prompt / URL extraction ──────────────────────────────────
-console.log(`\n=== 3. PROMPT & URL per event ===\n`);
+// ── 3. HTTP Status Codes ──────────────────────────────────────────
+console.log(`\n=== 3. HTTP STATUS CODES per event ===\n`);
+const withStatusCodes = events.filter((e) => e.httpStatusCode !== undefined);
+if (withStatusCodes.length > 0) {
+  for (const event of withStatusCodes) {
+    console.log(
+      `  [${event.rawEntryId}] statusCode=${event.httpStatusCode} | message=${event.message.slice(0, 50)}`,
+    );
+  }
+} else {
+  console.log(`  (No HTTP status codes found in events)`);
+}
+
+// ── 4. Prompt / URL extraction ──────────────────────────────────
+console.log(`\n=== 4. PROMPT & URL per event ===\n`);
 for (const event of events) {
   if (event.prompt || event.url) {
     console.log(
@@ -49,7 +62,7 @@ for (const event of events) {
   }
 }
 
-// ── 4. Correlate ────────────────────────────────────────────────
+// ── 5. Correlate ────────────────────────────────────────────────
 const { runs, keyStats } = correlateEventsWithStats(relevant);
 console.log(`\n=== 4. CORRELATE === (${runs.length} runs)\n`);
 console.log(`  keyStats: operationId=${keyStats.operationId} requestId=${keyStats.requestId} trace=${keyStats.trace} bucket=${keyStats.bucket}\n`);
@@ -70,9 +83,9 @@ for (const run of runs) {
   console.log();
 }
 
-// ── 5. Classify ─────────────────────────────────────────────────
+// ── 6. Classify ─────────────────────────────────────────────────
 const { runs: classifiedRuns, incidents } = classifyRuns(runs, relevant);
-console.log(`=== 5. CLASSIFY === (${incidents.length} incidents)\n`);
+console.log(`=== 6. CLASSIFY === (${incidents.length} incidents)\n`);
 for (const incident of incidents) {
   console.log(`  [${incident.severity}] ${incident.summary}`);
   console.log(`    run:    ${incident.runId}`);
@@ -80,9 +93,9 @@ for (const incident of incidents) {
   console.log();
 }
 
-// ── 6. Report summary ───────────────────────────────────────────
-const summary = buildSummary(classifiedRuns, incidents);
-console.log(`=== 6. REPORT SUMMARY ===\n`);
+// ── 7. Report summary ───────────────────────────────────────────
+const summary = buildSummary(classifiedRuns, incidents, events);
+console.log(`=== 7. REPORT SUMMARY ===\n`);
 console.log(`  totalRuns:     ${summary.totalRuns}`);
 console.log(`  completed:     ${summary.completedRuns}`);
 console.log(`  failed:        ${summary.failedRuns}`);
@@ -90,3 +103,7 @@ console.log(`  handedOff:     ${summary.handedOffRuns}`);
 console.log(`  queueTimeouts: ${summary.queueTimeouts}`);
 console.log(`  incidents:     info=${summary.incidentsBySeverity.info} warn=${summary.incidentsBySeverity.warning} crit=${summary.incidentsBySeverity.critical}`);
 console.log(`  runsByFlow:    ${JSON.stringify(summary.runsByFlow)}`);
+if (summary.httpStatusCodes) {
+  console.log(`  httpStatus:    2xx=${summary.httpStatusCodes["2xx"]} 4xx=${summary.httpStatusCodes["4xx"]} 5xx=${summary.httpStatusCodes["5xx"]}`);
+  console.log(`    details:     ${JSON.stringify(summary.httpStatusCodes.byCode)}`);
+}

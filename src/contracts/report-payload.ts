@@ -12,6 +12,13 @@ export interface IncidentSummary {
   critical: number;
 }
 
+export interface HttpStatusSummary {
+  "2xx": number;
+  "4xx": number;
+  "5xx": number;
+  byCode: Record<number, number>;
+}
+
 export interface ReportSummary {
   totalRuns: number;
   completedRuns: number;
@@ -20,6 +27,7 @@ export interface ReportSummary {
   queueTimeouts: number;
   incidentsBySeverity: IncidentSummary;
   runsByFlow: Partial<Record<ToolFlowName, number>>;
+  httpStatusCodes?: HttpStatusSummary;
 }
 
 export interface CorrelationKeyStats {

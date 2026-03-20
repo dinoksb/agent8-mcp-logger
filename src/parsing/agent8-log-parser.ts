@@ -388,6 +388,38 @@ function extractLooseMetadataFields(
   return metadata;
 }
 
+function extractHttpStatusCode(
+  textPayload: string | undefined,
+  payload: Record<string, unknown>,
+): number | undefined {
+  // 1) payload에 숫자형 statusCode/httpStatus/responseStatus 있으면 우선 사용
+  for (const key of ["statusCode", "httpStatus", "responseStatus"]) {
+    const val = asNumber(getPayloadValue(payload, key));
+    if (val !== undefined && val >= 100 && val <= 599) return val;
+  }
+
+  if (!textPayload) return undefined;
+
+  // 2) 텍스트 패턴 매칭
+  const patterns = [
+    /statusCode\s*[:=]\s*(\d{3})/i,
+    /httpStatus\s*[:=]\s*(\d{3})/i,
+    /responseStatus\s*[:=]\s*(\d{3})/i,
+    /HTTP[/ ]\s*(\d{3})/i,
+    /\bstatus\s*[:=]\s*(\d{3})/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = textPayload.match(pattern);
+    if (match) {
+      const code = Number(match[1]);
+      if (code >= 100 && code <= 599) return code;
+    }
+  }
+
+  return undefined;
+}
+
 function deriveMessage(entry: RawLogEntryRecord): string {
   const payload = entry.jsonPayload ?? {};
   const parsedTextPayload = entry.textPayload
@@ -571,6 +603,7 @@ export function parseLogEntry(entry: RawLogEntryRecord): ParsedLogEvent {
       getPayloadValue(payload, "fallbackFromModel", "fallback_from_model"),
     ),
     status: asString(getPayloadValue(payload, "status")),
+    httpStatusCode: extractHttpStatusCode(entry.textPayload, payload),
     url: asString(getPayloadValue(payload, "url")),
     errorMessage:
       asString(getPayloadValue(payload, "errorMessage", "error_message")) ??

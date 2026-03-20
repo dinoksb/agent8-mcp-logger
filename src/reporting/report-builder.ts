@@ -1,4 +1,5 @@
 import type {
+  HttpStatusSummary,
   ReportPayload,
   ReportRun,
   ReportSummary,
@@ -25,9 +26,45 @@ function buildRunsByFlow(
   return counts;
 }
 
+function buildHttpStatusSummary(
+  events: ParsedLogEvent[],
+): HttpStatusSummary | undefined {
+  const byCode: Record<number, number> = {};
+  for (const event of events) {
+    if (event.httpStatusCode !== undefined) {
+      byCode[event.httpStatusCode] =
+        (byCode[event.httpStatusCode] ?? 0) + 1;
+    }
+  }
+  if (Object.keys(byCode).length === 0) return undefined;
+
+  let count2xx = 0;
+  let count4xx = 0;
+  let count5xx = 0;
+
+  for (const [codeStr, count] of Object.entries(byCode)) {
+    const code = Number(codeStr);
+    if (code >= 200 && code < 300) {
+      count2xx += count;
+    } else if (code >= 400 && code < 500) {
+      count4xx += count;
+    } else if (code >= 500 && code < 600) {
+      count5xx += count;
+    }
+  }
+
+  return {
+    "2xx": count2xx,
+    "4xx": count4xx,
+    "5xx": count5xx,
+    byCode,
+  };
+}
+
 export function buildSummary(
   runs: CorrelatedRun[],
   incidents: IncidentReport[],
+  events: ParsedLogEvent[],
 ): ReportSummary {
   return {
     totalRuns: runs.length,
@@ -44,6 +81,7 @@ export function buildSummary(
         .length,
     },
     runsByFlow: buildRunsByFlow(runs),
+    httpStatusCodes: buildHttpStatusSummary(events),
   };
 }
 
@@ -87,7 +125,7 @@ export function buildReportPayload(input: {
     coveredFrom: input.coveredFrom,
     coveredTo: input.coveredTo,
     query: input.query,
-    summary: buildSummary(reportRuns, input.incidents),
+    summary: buildSummary(reportRuns, input.incidents, input.events),
     diagnostics: input.diagnostics,
     runs: reportRuns,
     incidents: input.incidents,
