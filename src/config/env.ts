@@ -35,7 +35,7 @@ function parseToolFlows(value: string | undefined): ToolFlowName[] {
 
 function defaultWindow(): { from: string; to: string } {
   const to = new Date();
-  const from = new Date(to.getTime() - 24 * 60 * 60 * 1000);
+  const from = new Date(to.getTime() - 6 * 60 * 60 * 1000);
   return {
     from: from.toISOString(),
     to: to.toISOString(),

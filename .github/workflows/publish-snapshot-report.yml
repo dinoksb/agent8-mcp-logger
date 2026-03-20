@@ -27,7 +27,7 @@ on:
         required: false
         type: string
   schedule:
-    - cron: "5 * * * *"
+    - cron: "5 */6 * * *"
 
 permissions:
   contents: read
@@ -50,7 +50,7 @@ jobs:
       HAS_GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY != '' }}
       HAS_WIF_CONFIG: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && vars.GCP_SERVICE_ACCOUNT != '' }}
       REPO_SNAPSHOT_SOURCE: ${{ vars.SNAPSHOT_SOURCE }}
-      REPO_SNAPSHOT_WINDOW_HOURS: ${{ vars.SNAPSHOT_WINDOW_HOURS || '1' }}
+      REPO_SNAPSHOT_WINDOW_HOURS: ${{ vars.SNAPSHOT_WINDOW_HOURS || '6' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
