@@ -40,6 +40,29 @@ function pickResultUrl(events: ParsedLogEvent[]): string | undefined {
   return reversed.find((event) => event.url)?.url;
 }
 
+function pickHttpStatusCode(events: ParsedLogEvent[]): number | undefined {
+  // failed stage 이벤트에서 우선 픽업 (4xx/5xx)
+  const failedEvent = events.find(
+    (e) => e.stage === "failed" && e.httpStatusCode !== undefined
+  );
+  if (failedEvent?.httpStatusCode !== undefined)
+    return failedEvent.httpStatusCode;
+
+  // 마지막으로 나타난 4xx/5xx
+  const errorEvent = [...events]
+    .reverse()
+    .find(
+      (e) => e.httpStatusCode !== undefined && e.httpStatusCode >= 400
+    );
+  if (errorEvent?.httpStatusCode !== undefined)
+    return errorEvent.httpStatusCode;
+
+  // 그 외 마지막 상태 코드
+  return [...events]
+    .reverse()
+    .find((e) => e.httpStatusCode !== undefined)?.httpStatusCode;
+}
+
 function buildCorrelationAliases(events: ParsedLogEvent[]): CorrelationAliases {
   const requestIdToOperationId = new Map<string, string>();
   const traceToOperationId = new Map<string, string>();
@@ -285,6 +308,7 @@ export function correlateEventsWithStats(
               : undefined,
         prompt: pickRunPrompt(eventsInRun),
         resultUrl: pickResultUrl(eventsInRun),
+        httpStatusCode: pickHttpStatusCode(eventsInRun),
         evidenceEventIds: eventsInRun.map((event) => event.eventId),
         evidenceRawEntryIds: unique(
           eventsInRun

@@ -78,6 +78,7 @@ for (const run of runs) {
   console.log(`    duration:   ${run.totalDurationMs != null ? `${run.totalDurationMs}ms` : "-"}`);
   console.log(`    prompt:     ${run.prompt?.slice(0, 60) ?? "-"}`);
   console.log(`    resultUrl:  ${run.resultUrl ?? "-"}`);
+  console.log(`    httpStatus: ${run.httpStatusCode ?? "-"}`);
   console.log(`    stages:     ${run.stages.map((s) => `${s.stage}(${s.durationMs ?? "?"}ms)`).join(" → ")}`);
   console.log(`    events:     ${run.evidenceEventIds.length}`);
   console.log();

@@ -1071,7 +1071,7 @@
                   </div>
                   <div>
                     <span class="subtle">Failure / Timeout</span>
-                    <strong>${run.failureKind ? labelCase(run.failureKind) : "-"}${run.timeoutKind ? `<br />${labelCase(run.timeoutKind)}` : ""}</strong>
+                    <strong>${run.failureKind ? labelCase(run.failureKind) : "-"}${run.timeoutKind ? `<br />${labelCase(run.timeoutKind)}` : ""}${run.httpStatusCode !== undefined ? `<br />HTTP ${run.httpStatusCode}` : ""}</strong>
                   </div>
                 </div>
 

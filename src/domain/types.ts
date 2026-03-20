@@ -149,6 +149,7 @@ export interface CorrelatedRun {
   bottleneckDurationMs?: number;
   timeoutKind?: TimeoutKind;
   failureKind?: FailureKind;
+  httpStatusCode?: number;
   prompt?: string;
   resultUrl?: string;
   evidenceEventIds: string[];
